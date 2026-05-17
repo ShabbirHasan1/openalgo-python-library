@@ -11,6 +11,7 @@ from .strategy import Strategy
 from .feed import FeedAPI
 from .options import OptionsAPI
 from .telegram import TelegramAPI
+from .whatsapp import WhatsAppAPI
 from .utilities import UtilitiesAPI
 from .indicators import ta
 
@@ -27,7 +28,7 @@ if HAS_NUMBA:
 nbjit = _jit_shim
 prange = _prange
 
-class api(OrderAPI, DataAPI, AccountAPI, FeedAPI, OptionsAPI, TelegramAPI, UtilitiesAPI):
+class api(OrderAPI, DataAPI, AccountAPI, FeedAPI, OptionsAPI, TelegramAPI, WhatsAppAPI, UtilitiesAPI):
     """
     OpenAlgo API client class
     """
@@ -102,7 +103,7 @@ class api(OrderAPI, DataAPI, AccountAPI, FeedAPI, OptionsAPI, TelegramAPI, Utili
         self._reconnect_lock = _threading.Lock()
         self._active_subs = {1: {}, 2: {}, 3: {}}
 
-__version__ = "1.0.49"
+__version__ = "1.0.50"
 
 # Export main components for easy access
 __all__ = ['api', 'Strategy', 'ta', 'nbjit', 'prange', 'HAS_NUMBA']
