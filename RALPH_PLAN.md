@@ -139,9 +139,21 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   intentionally KEPT (run interpreted) because the parity suites use them as the
   reference. They are never called by the public API. A later optional pass can delete
   them and freeze references to saved golden arrays.
-- **Phase 4 — Packaging + CI/CD** : maturin pyproject (mixed python+rust,
-  module-name openalgo._oaindicators), GitHub Actions mirroring opengreeks (cargo test
-  -> parity -> abi3 wheels linux/macos/windows + sdist -> PyPI on v* via OIDC).
+- **Phase 4 — Packaging + CI/CD** [DONE]
+  - [x] pyproject.toml: build-backend maturin, python-source=".",
+        module-name="openalgo._oaindicators", manifest-path="rust/oa_py/Cargo.toml",
+        features=["pyo3/extension-module"]; metadata migrated from setup.py.
+  - [x] Local `maturin build --release` -> abi3 wheel
+        openalgo-1.0.51-cp39-abi3-win_amd64.whl that bundles the full openalgo python
+        package + openalgo/_oaindicators.pyd (28 files, verified).
+  - [x] .github/workflows/CI.yml mirroring opengreeks: cargo test (oa_core) -> Linux
+        wheel smoke test (benchmark/ci_smoke.py) -> abi3 wheels matrix (linux
+        x86_64+aarch64 manylinux 2_28, macos-14 x86_64+arm64, windows msvc) -> sdist ->
+        PyPI publish on v* via OIDC. PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 env set.
+  - [x] benchmark/ci_smoke.py: synthetic-data end-to-end check (no committed data),
+        10/10 PASS; asserts numba never imported.
+  NOTE: setup.py/setup.cfg kept but superseded by pyproject (pip uses the maturin
+  backend). Can be deleted in a final tidy. Wheels build under rust/target (gitignored).
 - **Phase 5 — Benchmark report** (rust vs numba vs talib) + final verification, then
   STOP and ask user before any push.
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
