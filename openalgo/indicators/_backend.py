@@ -615,6 +615,91 @@ def session_vwap(source, volume, starts):
     return vwap, sd
 
 
+def vi(high, low, close, period):
+    high, low, close = _f(high), _f(low), _f(close)
+    period = int(period)
+    n = close.size
+    vmp = np.full(n, np.nan)
+    vmm = np.full(n, np.nan)
+    if n > 1:
+        vmp[1:] = np.abs(high[1:] - low[:-1])
+        vmm[1:] = np.abs(low[1:] - high[:-1])
+    atr1 = true_range(high, low, close)  # tr[0]=high-low, matches atr_single
+    vmpr = rolling_sum(vmp, period)
+    vmmr = rolling_sum(vmm, period)
+    strr = rolling_sum(atr1, period)
+    vip = np.full(n, np.nan)
+    vim = np.full(n, np.nan)
+    sl = slice(period, n)
+    sr = strr[sl]
+    ok = (sr > 0) & ~np.isnan(sr)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        den = np.where(sr == 0, 1.0, sr)
+        vip[sl] = np.where(ok, vmpr[sl] / den, 0.0)
+        vim[sl] = np.where(ok, vmmr[sl] / den, 0.0)
+    return vip, vim
+
+
+def gator(high, low, jaw_period, teeth_period, lips_period):
+    high, low = _f(high), _f(low)
+    hl2 = (high + low) / 2.0
+    jaw = _shift(ema_wilder(hl2, int(jaw_period)), 8)
+    teeth = _shift(ema_wilder(hl2, int(teeth_period)), 5)
+    lips = _shift(ema_wilder(hl2, int(lips_period)), 3)
+    return np.abs(jaw - teeth), -np.abs(teeth - lips)
+
+
+def _stoch_single(data, period):
+    n = data.size
+    out = np.full(n, np.nan)
+    for i in range(int(period) - 1, n):
+        w = data[i - period + 1:i + 1]
+        wc = w[~np.isnan(w)]
+        if len(wc):
+            hi, lo = wc.max(), wc.min()
+            if hi != lo and not np.isnan(data[i]):
+                out[i] = (data[i] - lo) / (hi - lo) * 100.0
+            elif hi == lo:
+                out[i] = 50.0
+    return out
+
+
+def stc(data, fast_length, slow_length, cycle_length, d1_length, d2_length):
+    data = _f(data)
+    macd_ = ema(data, int(fast_length)) - ema(data, int(slow_length))
+    k = _stoch_single(macd_, int(cycle_length))
+    k = np.where(np.isnan(k), 0.0, k)
+    d = ema(k, int(d1_length))
+    kd = _stoch_single(d, int(cycle_length))
+    kd = np.where(np.isnan(kd), 0.0, kd)
+    s = ema(kd, int(d2_length))
+    return np.clip(s, 0.0, 100.0)
+
+
+def _wma_nan(data, period):
+    n = data.size
+    out = np.full(n, np.nan)
+    period = int(period)
+    for i in range(period - 1, n):
+        if not np.isnan(data[i]):
+            ws = vw = 0.0
+            for j in range(period):
+                idx = i - period + 1 + j
+                if not np.isnan(data[idx]):
+                    w = j + 1
+                    ws += data[idx] * w
+                    vw += w
+            if vw > 0:
+                out[i] = ws / vw
+    return out
+
+
+def coppock(data, wma_length, long_roc_length, short_roc_length):
+    data = _f(data)
+    rs = roc(data, int(long_roc_length)) + roc(data, int(short_roc_length))
+    return _wma_nan(rs, int(wma_length))
+
+
 def swma(data):
     """Symmetrically Weighted MA: weights [1,2,2,1]/6 over the last 4 bars."""
     data = _f(data)

@@ -14,7 +14,8 @@ import pandas as pd
 
 from openalgo.indicators import _backend as b
 from openalgo.indicators.oscillators import (ROC, CMO, TRIX, AO, AC, PPO, PO, DPO, AROONOSC,
-                                             UO, StochRSI, CHO, CHOP, RVI, KST, TSI)
+                                             UO, StochRSI, CHO, CHOP, RVI, KST, TSI,
+                                             VI, GatorOscillator, STC, Coppock)
 
 DATA = Path(__file__).resolve().parent / "data"
 FAILS = []
@@ -85,9 +86,39 @@ def main():
     cmp("kst", kk, _kst_ref(c))
     tk, ts = b.tsi(c, 25, 13, 13)
     cmp("tsi", tk, _tsi_ref(c))
+    vp, vm = b.vi(h, lo, c, 14)
+    rvp, rvm = VI._calculate_vi_tv_optimized(h, lo, c, 14)
+    cmp("vi.plus", vp, rvp)
+    cmp("vi.minus", vm, rvm)
+    gu, gl = b.gator(h, lo, 13, 8, 5)
+    rgu, rgl = _gator_ref(h, lo)
+    cmp("gator.up", gu, rgu)
+    cmp("gator.low", gl, rgl)
+    cmp("stc", b.stc(c, 23, 50, 10, 3, 3), _stc_ref(c))
+    cmp("coppock", b.coppock(c, 10, 14, 11), Coppock._calculate_coppock(c, 10, 14, 11))
 
     print("\nRESULT:", "ALL OSCILLATOR PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
     return 1 if FAILS else 0
+
+
+def _gator_ref(h, lo):
+    hl2 = (h + lo) / 2.0
+    jaw = GatorOscillator._apply_offset(GatorOscillator._calculate_rma(hl2, 13), 8)
+    teeth = GatorOscillator._apply_offset(GatorOscillator._calculate_rma(hl2, 8), 5)
+    lips = GatorOscillator._apply_offset(GatorOscillator._calculate_rma(hl2, 5), 3)
+    return np.abs(jaw - teeth), -np.abs(teeth - lips)
+
+
+def _stc_ref(c):
+    from openalgo.indicators.trend import EMA
+    from openalgo.indicators import utils as u
+    macd = u.ema(c, 23) - u.ema(c, 50)
+    k = STC._calculate_stochastic(macd, 10)
+    k = np.where(np.isnan(k), 0.0, k)
+    d = u.ema(k, 3)
+    kd = STC._calculate_stochastic(d, 10)
+    kd = np.where(np.isnan(kd), 0.0, kd)
+    return np.clip(u.ema(kd, 3), 0.0, 100.0)
 
 
 def _kst_ref(c):

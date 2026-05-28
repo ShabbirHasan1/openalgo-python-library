@@ -1407,8 +1407,8 @@ class VI(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period + 1, len(close_data))
         
-        vi_plus, vi_minus = self._calculate_vi_tv_optimized(high_data, low_data, close_data, period)
-        
+        vi_plus, vi_minus = _backend.vi(high_data, low_data, close_data, period)
+
         results = (vi_plus, vi_minus)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1500,23 +1500,8 @@ class GatorOscillator(BaseIndicator):
         
         high_data, low_data = self.align_arrays(high_data, low_data)
         
-        # Calculate hl2 (TradingView's hl2)
-        hl2 = (high_data + low_data) / 2.0
-        
-        # Calculate RMA for each Alligator line
-        jaw_rma = self._calculate_rma(hl2, jaw_period)
-        teeth_rma = self._calculate_rma(hl2, teeth_period)
-        lips_rma = self._calculate_rma(hl2, lips_period)
-        
-        # Apply TradingView offsets
-        jaw = self._apply_offset(jaw_rma, 8)      # offset(rma(hl2, 13), 8)
-        teeth = self._apply_offset(teeth_rma, 5)  # offset(rma(hl2, 8), 5)
-        lips = self._apply_offset(lips_rma, 3)    # offset(rma(hl2, 5), 3)
-        
-        # Calculate Gator Oscillator histograms
-        upper_histogram = np.abs(jaw - teeth)     # abs(jaw - teeth)
-        lower_histogram = -np.abs(teeth - lips)   # -abs(teeth - lips)
-        
+        upper_histogram, lower_histogram = _backend.gator(high_data, low_data,
+                                                          jaw_period, teeth_period, lips_period)
         results = (upper_histogram, lower_histogram)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1614,36 +1599,7 @@ class STC(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Step 1: Calculate MACD
-        # macd = ema(src, fastLength) - ema(src, slowLength)
-        fast_ema = ema(validated_data, fast_length)
-        slow_ema = ema(validated_data, slow_length)
-        macd = fast_ema - slow_ema
-        
-        # Step 2: First stochastic calculation on MACD
-        # k = nz(stoch(macd, macd, macd, cycleLength))
-        k = self._calculate_stochastic(macd, cycle_length)
-        # Handle nz() - replace NaN with 0
-        k = np.where(np.isnan(k), 0.0, k)
-        
-        # Step 3: Smooth with EMA
-        # d = ema(k, d1Length)
-        d = ema(k, d1_length)
-        
-        # Step 4: Second stochastic calculation
-        # kd = nz(stoch(d, d, d, cycleLength))
-        kd = self._calculate_stochastic(d, cycle_length)
-        # Handle nz() - replace NaN with 0
-        kd = np.where(np.isnan(kd), 0.0, kd)
-        
-        # Step 5: Final EMA smoothing
-        # stc = ema(kd, d2Length)
-        stc = ema(kd, d2_length)
-        
-        # Step 6: Clamp between 0 and 100
-        # stc := max(min(stc, 100), 0)
-        stc = np.clip(stc, 0.0, 100.0)
-        
+        stc = _backend.stc(validated_data, fast_length, slow_length, cycle_length, d1_length, d2_length)
         return self.format_output(stc, input_type, index)
 
 
@@ -1789,7 +1745,6 @@ class Coppock(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        result = self._calculate_coppock(validated_data, wma_length, 
-                                       long_roc_length, short_roc_length)
+        result = _backend.coppock(validated_data, wma_length, long_roc_length, short_roc_length)
         
         return self.format_output(result, input_type, index)
