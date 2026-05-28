@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import ema, highest, lowest, sma, rolling_sum
+from . import _backend
 
 
 @jit(nopython=True, cache=True)
@@ -104,7 +105,7 @@ class RSI(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_rsi(validated_data, period)
+        result = _backend.rsi(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -175,7 +176,7 @@ class MACD(BaseIndicator):
         if fast_period >= slow_period:
             raise ValueError("Fast period must be less than slow period")
         
-        results = self._calculate_macd(validated_data, fast_period, slow_period, signal_period)
+        results = _backend.macd(validated_data, fast_period, slow_period, signal_period)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -288,11 +289,7 @@ class Stochastic(BaseIndicator):
         if smooth_k <= 0:
             raise ValueError(f"smooth_k must be positive, got {smooth_k}")
 
-        # Pre-compute O(n) highest/lowest
-        hh = highest(high_data, k_period)
-        ll = lowest(low_data, k_period)
-
-        results = self._calculate_stochastic(close_data, k_period, smooth_k, d_period, hh, ll)
+        results = _backend.stochastic(high_data, low_data, close_data, k_period, smooth_k, d_period)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -375,7 +372,7 @@ class CCI(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
         
-        result = self._calculate_cci(high_data, low_data, close_data, period)
+        result = _backend.cci(high_data, low_data, close_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -439,11 +436,7 @@ class WilliamsR(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
 
-        # Pre-compute O(n) highest/lowest
-        hh = highest(high_data, period)
-        ll = lowest(low_data, period)
-
-        result = self._calculate_williams_r(close_data, period, hh, ll)
+        result = _backend.williams_r(high_data, low_data, close_data, period)
         return self.format_output(result, input_type, index)
 
 

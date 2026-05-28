@@ -74,6 +74,41 @@ def main():
     check("ema vs manual", float(np.abs(oute - refe).max()) < 1e-9,
           f"maxdiff={np.abs(oute-refe).max():.2e}")
 
+    h = pd.read_csv(DATA_DIR / "RELIANCE_D.csv", index_col=0)["high"].to_numpy(np.float64)
+    lo_ = pd.read_csv(DATA_DIR / "RELIANCE_D.csv", index_col=0)["low"].to_numpy(np.float64)
+
+    def gate_vs_talib(name, got, ref_vals, tol=1e-9):
+        got = np.asarray(got, np.float64)
+        ref_vals = np.asarray(ref_vals, np.float64)
+        n = min(len(got), len(ref_vals))
+        g, r = got[-n:], ref_vals[-n:]
+        m = ~(np.isnan(g) | np.isnan(r))
+        d = float(np.abs(g[m] - r[m]).max()) if m.any() else 0.0
+        check(f"{name} vs talib", d < tol, f"maxdiff={d:.2e}")
+
+    if HAVE_TALIB:
+        gate_vs_talib("rsi", ta.rsi(arr, per), talib.RSI(arr, per))
+        gate_vs_talib("cci", ta.cci(h, lo_, arr, 20), talib.CCI(h, lo_, arr, 20))
+        gate_vs_talib("williams_r", ta.williams_r(h, lo_, arr, per), talib.WILLR(h, lo_, arr, per))
+        up, mid, low = ta.bbands(arr, 20, 2.0)
+        tu, tm, tl = talib.BBANDS(arr, 20, 2.0, 2.0, 0)
+        gate_vs_talib("bbands.mid", mid, tm)
+        gate_vs_talib("bbands.upper", up, tu)
+        gate_vs_talib("bbands.lower", low, tl)
+        # Informational (TA-Lib seeds EMA/ATR/STOCH differently from OpenAlgo):
+        for name, got, tv in [
+            ("atr", ta.atr(h, lo_, arr, per), talib.ATR(h, lo_, arr, per)),
+            ("macd", ta.macd(arr)[0], talib.MACD(arr)[0]),
+        ]:
+            g = np.asarray(got, np.float64); t = np.asarray(tv, np.float64)
+            m = ~(np.isnan(g) | np.isnan(t))
+            print(f"  [info] {name} vs talib maxdiff={np.abs(g[m]-t[m]).max():.3e} "
+                  f"(convention diff expected)")
+
+    # tuple-returning wrappers preserve Series typing
+    k, d = ta.stochastic(pd.Series(h), pd.Series(lo_), pd.Series(arr))
+    check("stochastic returns Series tuple", isinstance(k, pd.Series) and isinstance(d, pd.Series))
+
     # ---- list input -> ndarray out ----
     outl = ta.sma([1.0, 2.0, 3.0, 4.0, 5.0], 2)
     check("sma list->ndarray", isinstance(outl, np.ndarray) and outl[1] == 1.5)

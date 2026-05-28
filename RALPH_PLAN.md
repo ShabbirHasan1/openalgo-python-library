@@ -66,8 +66,15 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         ta.ema==manual (all 0.00 diff), Series/index/list typing preserved.
   - [x] `_warmup()` made defensive: **`import openalgo` now succeeds WITHOUT
         NUMBA_DISABLE_JIT** (the numpy>=2 numba crash no longer breaks import).
-  - [ ] Swap remaining trend MAs that only need existing kernels.
-  - [ ] Add Phase-1 indicator kernels (RSI, MACD, BBands, ATR, Stochastic, CCI).
+  - [x] Phase-1 batch migrated: RSI, MACD, BBands, ATR, Stochastic, CCI, Williams %R.
+        Kernels rsi/cci/williams_r/stochastic added to oa_core (cargo 17/17 green);
+        macd/bbands/atr composed in _backend from ema/sma/stdev/atr_wilder. Public
+        ta.rsi/cci/williams_r/bbands match TA-Lib (<=1.7e-11); atr/macd match
+        OpenAlgo's own prior output bit-for-bit (TA-Lib differs only by seed).
+  - [x] FP-association fix: running-sum kernels (sma/rolling_sum/stdev/variance/
+        vwma/cci) rewritten to Python's exact left-to-right association -> now
+        BIT-EXACT (0.0) vs the reference, not just within tolerance.
+  - [ ] Swap remaining trend MAs (dema/tema/trima/hma/vwma/zlema/t3/kama).
 
   LOCAL BUILD METHOD (until maturin/CI phase): from rust/ run
   `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build --release -p oa_py`

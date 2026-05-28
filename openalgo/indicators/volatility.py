@@ -8,8 +8,9 @@ import pandas as pd
 from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
-from .utils import (ema, atr_wilder, true_range, sma, stdev, highest, lowest, 
+from .utils import (ema, atr_wilder, true_range, sma, stdev, highest, lowest,
                     rolling_sum, ulcer_index_optimized)
+from . import _backend
 
 
 class ATR(BaseIndicator):
@@ -60,7 +61,7 @@ class ATR(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
         
-        result = atr_wilder(high_data, low_data, close_data, period)
+        result = _backend.atr_wilder(high_data, low_data, close_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -83,16 +84,8 @@ class BollingerBands(BaseIndicator):
     @staticmethod
     def _calculate_bollinger_bands(data: np.ndarray, period: int, 
                                   std_dev: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """O(n) optimized Bollinger Bands calculation using utils"""
-        # Use optimized O(n) utilities
-        middle = sma(data, period)
-        std_values = stdev(data, period)
-        
-        # Calculate upper and lower bands
-        upper = middle + (std_dev * std_values)
-        lower = middle - (std_dev * std_values)
-        
-        return upper, middle, lower
+        """O(n) optimized Bollinger Bands calculation using the Rust backend"""
+        return _backend.bbands(data, period, std_dev)
     
     def calculate(self, data: Union[np.ndarray, pd.Series, list],
                  period: int = 20, std_dev: float = 2.0) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[pd.Series, pd.Series, pd.Series]]:

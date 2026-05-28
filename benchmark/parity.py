@@ -25,6 +25,7 @@ import pandas as pd
 
 import openalgo._oaindicators as rs
 from openalgo.indicators import utils as ref
+from openalgo.indicators.momentum import RSI as _RSI, Stochastic as _STO, CCI as _CCI, WilliamsR as _WR
 
 try:
     import talib
@@ -129,8 +130,27 @@ def build_cases(P):
         ("falling(5)", lambda: rs.falling(c, 5), lambda: ref.falling(c, 5), "b", None, ""),
         ("valuewhen", lambda: rs.valuewhen(_expr(c, per), c, 1),
          lambda: ref.valuewhen(_expr(c, per), c, 1), "f", None, ""),
+        # Phase-1 indicators (reference = original numba staticmethods, pure-python)
+        ("rsi(14)", lambda: rs.rsi(c, per), lambda: _RSI._calculate_rsi(c, per), "f",
+         (lambda: talib.RSI(c, per)) if HAVE_TALIB else None, "match"),
+        ("cci(14)", lambda: rs.cci(h, l, c, per),
+         lambda: _CCI._calculate_cci(h, l, c, per), "f",
+         (lambda: talib.CCI(h, l, c, per)) if HAVE_TALIB else None, "match"),
+        ("williams_r(14)", lambda: rs.williams_r(h, l, c, per),
+         lambda: _WR._calculate_williams_r(c, per, ref.highest(h, per), ref.lowest(l, per)), "f",
+         (lambda: talib.WILLR(h, l, c, per)) if HAVE_TALIB else None, "match"),
+        ("stoch_k", lambda: rs.stochastic(h, l, c, per, 3, 3)[0],
+         lambda: _ref_stoch(h, l, c, per, 3, 3)[0], "f", None, ""),
+        ("stoch_d", lambda: rs.stochastic(h, l, c, per, 3, 3)[1],
+         lambda: _ref_stoch(h, l, c, per, 3, 3)[1], "f", None, ""),
     ]
     return cases
+
+
+def _ref_stoch(h, l, c, k, sk, d):
+    hh = ref.highest(h, k)
+    ll = ref.lowest(l, k)
+    return _STO._calculate_stochastic(c, k, sk, d, hh, ll)
 
 
 def _ref_wma(c, period):

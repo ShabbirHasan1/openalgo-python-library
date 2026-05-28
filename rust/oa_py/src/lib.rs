@@ -37,6 +37,51 @@ wrap_period!(change, oa_core::change);
 wrap_period!(roc, oa_core::roc);
 wrap_period!(cmo, oa_core::cmo);
 wrap_period!(ulcer_index, oa_core::ulcer_index);
+wrap_period!(rsi, oa_core::rsi);
+
+/// (high, low, close, period) -> f64 array, for hlc kernels.
+macro_rules! wrap_hlc_period {
+    ($name:ident, $core:path) => {
+        #[pyfunction]
+        fn $name<'py>(
+            py: Python<'py>,
+            high: PyReadonlyArray1<'py, f64>,
+            low: PyReadonlyArray1<'py, f64>,
+            close: PyReadonlyArray1<'py, f64>,
+            period: usize,
+        ) -> PyResult<Py<PyArray1<f64>>> {
+            let out = $core(high.as_slice()?, low.as_slice()?, close.as_slice()?, period);
+            Ok(out.into_pyarray_bound(py).unbind())
+        }
+    };
+}
+wrap_hlc_period!(cci, oa_core::cci);
+wrap_hlc_period!(williams_r, oa_core::williams_r);
+
+#[pyfunction]
+#[pyo3(signature = (high, low, close, k_period, smooth_k, d_period))]
+fn stochastic<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    close: PyReadonlyArray1<'py, f64>,
+    k_period: usize,
+    smooth_k: usize,
+    d_period: usize,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let (k, d) = oa_core::stochastic(
+        high.as_slice()?,
+        low.as_slice()?,
+        close.as_slice()?,
+        k_period,
+        smooth_k,
+        d_period,
+    );
+    Ok((
+        k.into_pyarray_bound(py).unbind(),
+        d.into_pyarray_bound(py).unbind(),
+    ))
+}
 
 #[pyfunction]
 fn true_range<'py>(
@@ -179,6 +224,10 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(roc, m)?)?;
     m.add_function(wrap_pyfunction!(cmo, m)?)?;
     m.add_function(wrap_pyfunction!(ulcer_index, m)?)?;
+    m.add_function(wrap_pyfunction!(rsi, m)?)?;
+    m.add_function(wrap_pyfunction!(cci, m)?)?;
+    m.add_function(wrap_pyfunction!(williams_r, m)?)?;
+    m.add_function(wrap_pyfunction!(stochastic, m)?)?;
     m.add_function(wrap_pyfunction!(true_range, m)?)?;
     m.add_function(wrap_pyfunction!(atr_wilder, m)?)?;
     m.add_function(wrap_pyfunction!(atr_sma, m)?)?;

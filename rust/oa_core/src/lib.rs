@@ -41,7 +41,8 @@ pub fn sma(data: &[f64], period: usize) -> Vec<f64> {
     }
     result[period - 1] = rolling / period as f64;
     for i in period..n {
-        rolling += data[i] - data[i - period];
+        // Match the reference left-to-right association exactly: (r + new) - old.
+        rolling = rolling + data[i] - data[i - period];
         result[i] = rolling / period as f64;
     }
     result
@@ -60,7 +61,7 @@ pub fn rolling_sum(data: &[f64], period: usize) -> Vec<f64> {
     }
     result[period - 1] = rolling;
     for i in period..n {
-        rolling += data[i] - data[i - period];
+        rolling = rolling + data[i] - data[i - period];
         result[i] = rolling;
     }
     result
@@ -85,8 +86,8 @@ pub fn rolling_variance(data: &[f64], period: usize) -> Vec<f64> {
     for i in period..n {
         let old = data[i - period];
         let new = data[i];
-        rsum += new - old;
-        rsq += new * new - old * old;
+        rsum = rsum + new - old;
+        rsq = rsq + new * new - old * old;
         let mean = rsum / p;
         result[i] = (rsq / p) - mean * mean;
     }
@@ -112,8 +113,8 @@ pub fn stdev(data: &[f64], period: usize) -> Vec<f64> {
     for i in period..n {
         let old = data[i - period];
         let new = data[i];
-        rsum += new - old;
-        rsq += new * new - old * old;
+        rsum = rsum + new - old;
+        rsq = rsq + new * new - old * old;
         let mean = rsum / p;
         result[i] = (rsq / p - mean * mean).max(0.0).sqrt();
     }
@@ -357,8 +358,10 @@ pub fn vwma(data: &[f64], volume: &[f64], period: usize) -> Vec<f64> {
         data[period - 1]
     };
     for i in period..n {
-        sum_pv += data[i] * volume[i] - data[i - period] * volume[i - period];
-        sum_v += volume[i] - volume[i - period];
+        let new_pv = data[i] * volume[i];
+        let old_pv = data[i - period] * volume[i - period];
+        sum_pv = sum_pv + new_pv - old_pv;
+        sum_v = sum_v + volume[i] - volume[i - period];
         result[i] = if sum_v > 0.0 { sum_pv / sum_v } else { data[i] };
     }
     result
@@ -573,6 +576,160 @@ pub fn flip(primary: &[bool], secondary: &[bool]) -> Vec<bool> {
     result
 }
 
+// ============================================================================
+// Momentum / oscillator indicators
+// ============================================================================
+
+/// Wilder RSI. NaN until index `period`; avg over first `period` deltas, then
+/// Wilder smoothing. avg_loss == 0 -> 100.
+pub fn rsi(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if period == 0 || n < period + 1 {
+        return result;
+    }
+    let p = period as f64;
+    let pm1 = (period - 1) as f64;
+    let mut avg_gain = 0.0;
+    let mut avg_loss = 0.0;
+    for i in 0..period {
+        let d = data[i + 1] - data[i];
+        if d > 0.0 {
+            avg_gain += d;
+        } else if d < 0.0 {
+            avg_loss += -d;
+        }
+    }
+    avg_gain /= p;
+    avg_loss /= p;
+    result[period] = if avg_loss == 0.0 {
+        100.0
+    } else {
+        100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
+    };
+    for i in period..n - 1 {
+        let d = data[i + 1] - data[i];
+        let gain = if d > 0.0 { d } else { 0.0 };
+        let loss = if d < 0.0 { -d } else { 0.0 };
+        avg_gain = (avg_gain * pm1 + gain) / p;
+        avg_loss = (avg_loss * pm1 + loss) / p;
+        result[i + 1] = if avg_loss == 0.0 {
+            100.0
+        } else {
+            100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
+        };
+    }
+    result
+}
+
+/// Stochastic oscillator. Returns (slow_k, slow_d):
+/// fast_k = 100*(c-ll)/(hh-ll) (50 when hh==ll); slow_k = SMA(fast_k, smooth_k);
+/// slow_d = SMA(slow_k, d_period). hh/ll are rolling extrema over k_period.
+pub fn stochastic(
+    high: &[f64],
+    low: &[f64],
+    close: &[f64],
+    k_period: usize,
+    smooth_k: usize,
+    d_period: usize,
+) -> (Vec<f64>, Vec<f64>) {
+    let n = close.len();
+    let mut slow_k = nan_vec(n);
+    let mut slow_d = nan_vec(n);
+    if k_period == 0 || smooth_k == 0 || d_period == 0 || n == 0 {
+        return (slow_k, slow_d);
+    }
+    let hh = highest(high, k_period);
+    let ll = lowest(low, k_period);
+    let mut fast_k = nan_vec(n);
+    let fk_start = k_period - 1;
+    for i in fk_start..n {
+        fast_k[i] = if hh[i] != ll[i] {
+            100.0 * (close[i] - ll[i]) / (hh[i] - ll[i])
+        } else {
+            50.0
+        };
+    }
+    let sk_start = fk_start + smooth_k - 1;
+    if sk_start < n {
+        let mut s = 0.0;
+        for j in fk_start..fk_start + smooth_k {
+            s += fast_k[j];
+        }
+        slow_k[sk_start] = s / smooth_k as f64;
+        for i in sk_start + 1..n {
+            s += fast_k[i] - fast_k[i - smooth_k];
+            slow_k[i] = s / smooth_k as f64;
+        }
+    }
+    let sd_start = sk_start + d_period - 1;
+    if sd_start < n {
+        let mut s = 0.0;
+        for j in sk_start..sk_start + d_period {
+            s += slow_k[j];
+        }
+        slow_d[sd_start] = s / d_period as f64;
+        for i in sd_start + 1..n {
+            s += slow_k[i] - slow_k[i - d_period];
+            slow_d[i] = s / d_period as f64;
+        }
+    }
+    (slow_k, slow_d)
+}
+
+/// Commodity Channel Index. TP=(h+l+c)/3; (TP-SMA(TP))/(0.015*meandev); 0 if meandev==0.
+pub fn cci(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Vec<f64> {
+    let n = close.len();
+    let mut out = nan_vec(n);
+    if period == 0 || n < period {
+        return out;
+    }
+    let tp: Vec<f64> = (0..n)
+        .map(|i| (high[i] + low[i] + close[i]) / 3.0)
+        .collect();
+    let p = period as f64;
+    let mut rsum = 0.0;
+    for &t in tp.iter().take(period) {
+        rsum += t;
+    }
+    for i in period - 1..n {
+        if i > period - 1 {
+            rsum = rsum + tp[i] - tp[i - period];
+        }
+        let sma_tp = rsum / p;
+        let mut md = 0.0;
+        for j in 0..period {
+            md += (tp[i - period + 1 + j] - sma_tp).abs();
+        }
+        md /= p;
+        out[i] = if md != 0.0 {
+            (tp[i] - sma_tp) / (0.015 * md)
+        } else {
+            0.0
+        };
+    }
+    out
+}
+
+/// Williams %R. -100*(hh-close)/(hh-ll) over `period`; -50 when hh==ll.
+pub fn williams_r(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Vec<f64> {
+    let n = close.len();
+    let mut out = nan_vec(n);
+    if period == 0 {
+        return out;
+    }
+    let hh = highest(high, period);
+    let ll = lowest(low, period);
+    for i in period - 1..n {
+        out[i] = if hh[i] != ll[i] {
+            -100.0 * (hh[i] - close[i]) / (hh[i] - ll[i])
+        } else {
+            -50.0
+        };
+    }
+    out
+}
+
 /// valuewhen: value of `array` when `expr` (nonzero == true) was true the n-th most
 /// recent time. Mirrors the legacy kernel, including its 1000-entry lookback cap.
 pub fn valuewhen(expr: &[f64], array: &[f64], n: usize) -> Vec<f64> {
@@ -714,6 +871,45 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn rsi_all_gains_is_100() {
+        let d = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let r = rsi(&d, 3);
+        assert!(r[0].is_nan() && r[2].is_nan());
+        approx(r[3], 100.0);
+        approx(r[5], 100.0);
+    }
+
+    #[test]
+    fn williams_r_bounds() {
+        let h = [2.0, 3.0, 4.0, 5.0];
+        let l = [1.0, 1.0, 2.0, 3.0];
+        let c = [1.5, 2.5, 3.5, 4.5];
+        let r = williams_r(&h, &l, &c, 2);
+        assert!(r[0].is_nan());
+        // i=1: hh=3,ll=1,c=2.5 -> -100*(3-2.5)/(3-1)=-25
+        approx(r[1], -25.0);
+    }
+
+    #[test]
+    fn stochastic_shapes() {
+        let h = [2.0, 3.0, 4.0, 5.0, 6.0];
+        let l = [1.0, 1.0, 2.0, 3.0, 4.0];
+        let c = [1.5, 2.5, 3.5, 4.5, 5.5];
+        let (k, d) = stochastic(&h, &l, &c, 2, 2, 2);
+        assert_eq!(k.len(), 5);
+        assert_eq!(d.len(), 5);
+        assert!(k[0].is_nan());
+    }
+
+    #[test]
+    fn cci_zero_meandev() {
+        let d = [5.0, 5.0, 5.0, 5.0];
+        let r = cci(&d, &d, &d, 2);
+        approx(r[1], 0.0);
+        approx(r[3], 0.0);
     }
 
     #[test]
