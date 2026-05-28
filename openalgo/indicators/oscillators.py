@@ -913,8 +913,8 @@ class RVI(BaseIndicator):
         open_data, high_data, low_data, close_data = self.align_arrays(open_data, high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
         
-        rvi, signal = self._calculate_rvi(open_data, high_data, low_data, close_data, period)
-        
+        rvi, signal = _backend.rvi_vigor(open_data, high_data, low_data, close_data, period)
+
         results = (rvi, signal)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1208,26 +1208,8 @@ class KST(BaseIndicator):
             if param <= 0:
                 raise ValueError(f"{name} must be positive, got {param}")
         
-        # Calculate ROCs using TradingView naming
-        roc_1 = self._calculate_roc(validated_data, roclen1)
-        roc_2 = self._calculate_roc(validated_data, roclen2)
-        roc_3 = self._calculate_roc(validated_data, roclen3)
-        roc_4 = self._calculate_roc(validated_data, roclen4)
-        
-        # Calculate smoothed ROCs (smaroc function)
-        smaroc_1 = self._calculate_sma(roc_1, smalen1)
-        smaroc_2 = self._calculate_sma(roc_2, smalen2)
-        smaroc_3 = self._calculate_sma(roc_3, smalen3)
-        smaroc_4 = self._calculate_sma(roc_4, smalen4)
-        
-        # Calculate KST using TradingView formula
-        # kst = smaroc(roclen1, smalen1) + 2 * smaroc(roclen2, smalen2) + 3 * smaroc(roclen3, smalen3) + 4 * smaroc(roclen4, smalen4)
-        kst = smaroc_1 * 1 + smaroc_2 * 2 + smaroc_3 * 3 + smaroc_4 * 4
-        
-        # Calculate signal line using SMA (not EMA) to match TradingView
-        # sig = ta.sma(kst, siglen)
-        signal_line = self._calculate_sma(kst, siglen)
-        
+        kst, signal_line = _backend.kst(validated_data, roclen1, roclen2, roclen3, roclen4,
+                                        smalen1, smalen2, smalen3, smalen4, siglen)
         results = (kst, signal_line)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1296,32 +1278,7 @@ class TSI(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Calculate price changes
-        price_changes = np.diff(validated_data)
-        price_changes = np.concatenate([np.array([0.0]), price_changes])
-        
-        # Calculate absolute price changes
-        abs_price_changes = np.abs(price_changes)
-        
-        # First smoothing
-        pc_smooth1 = self._calculate_ema(price_changes, long)
-        apc_smooth1 = self._calculate_ema(abs_price_changes, long)
-        
-        # Second smoothing
-        pc_smooth2 = self._calculate_ema(pc_smooth1, short)
-        apc_smooth2 = self._calculate_ema(apc_smooth1, short)
-        
-        # Calculate TSI
-        tsi = np.full_like(validated_data, np.nan)
-        for i in range(len(validated_data)):
-            if apc_smooth2[i] != 0:
-                tsi[i] = 100 * (pc_smooth2[i] / apc_smooth2[i])
-            else:
-                tsi[i] = 0.0
-        
-        # Calculate signal line
-        signal_line = self._calculate_ema(tsi, signal)
-        
+        tsi, signal_line = _backend.tsi(validated_data, long, short, signal)
         results = (tsi, signal_line)
         return self.format_multiple_outputs(results, input_type, index)
 

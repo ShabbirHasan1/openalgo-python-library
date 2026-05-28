@@ -111,10 +111,11 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         1e-12 rel). benchmark/oscillator_parity.py.
   - [x] Oscillators batch 2a: UO, StochRSI, CHO, CHOP (composed; all bit-exact incl
         UO per-window np.sum and CHOP log10).
-  - [ ] Oscillators batch 2b: RVI(vigor - needs SWMA helper), KST, TSI, VI,
-        GatorOscillator, STC, Coppock.
+  - [x] Oscillators batch 2b: RVI(vigor, swma), KST, TSI. All bit-exact (TSI fixed
+        via 100*(pcs2/apcs2) association).
+  - [ ] Oscillators batch 2c: VI, GatorOscillator, STC, Coppock.
   - [ ] statistics / hybrid modules.
-        71 of ~90 indicators migrated.
+        74 of ~90 indicators migrated.
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
         Phase 3 cleanup along with all remaining _calculate_* numba staticmethods.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);

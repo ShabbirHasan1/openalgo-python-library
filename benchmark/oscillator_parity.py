@@ -14,7 +14,7 @@ import pandas as pd
 
 from openalgo.indicators import _backend as b
 from openalgo.indicators.oscillators import (ROC, CMO, TRIX, AO, AC, PPO, PO, DPO, AROONOSC,
-                                             UO, StochRSI, CHO, CHOP)
+                                             UO, StochRSI, CHO, CHOP, RVI, KST, TSI)
 
 DATA = Path(__file__).resolve().parent / "data"
 FAILS = []
@@ -77,9 +77,36 @@ def main():
     cmp("stochrsi.d", ud, rud)
     cmp("cho", b.cho(h, lo, c, v, 3, 10), _cho_ref(h, lo, c, v))
     cmp("chop", b.chop(h, lo, c, 14), CHOP._calculate_chop(h, lo, c, 14))
+    rk, rks = b.rvi_vigor(o, h, lo, c, 10)
+    rrk, rrks = RVI._calculate_rvi(o, h, lo, c, 10)
+    cmp("rvi.vigor", rk, rrk)
+    cmp("rvi.signal", rks, rrks)
+    kk, ks = b.kst(c, 10, 15, 20, 30, 10, 10, 10, 15, 9)
+    cmp("kst", kk, _kst_ref(c))
+    tk, ts = b.tsi(c, 25, 13, 13)
+    cmp("tsi", tk, _tsi_ref(c))
 
     print("\nRESULT:", "ALL OSCILLATOR PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
     return 1 if FAILS else 0
+
+
+def _kst_ref(c):
+    r1 = KST._calculate_roc(c, 10); r2 = KST._calculate_roc(c, 15)
+    r3 = KST._calculate_roc(c, 20); r4 = KST._calculate_roc(c, 30)
+    s1 = KST._calculate_sma(r1, 10); s2 = KST._calculate_sma(r2, 10)
+    s3 = KST._calculate_sma(r3, 10); s4 = KST._calculate_sma(r4, 15)
+    return s1 * 1 + s2 * 2 + s3 * 3 + s4 * 4
+
+
+def _tsi_ref(c):
+    pc = np.concatenate([[0.0], np.diff(c)])
+    apc = np.abs(pc)
+    pcs2 = TSI._calculate_ema(TSI._calculate_ema(pc, 25), 13)
+    apcs2 = TSI._calculate_ema(TSI._calculate_ema(apc, 25), 13)
+    out = np.full_like(c, np.nan)
+    for i in range(len(c)):
+        out[i] = 100 * (pcs2[i] / apcs2[i]) if apcs2[i] != 0 else 0.0
+    return out
 
 
 def _cho_ref(h, lo, c, v):

@@ -615,6 +615,55 @@ def session_vwap(source, volume, starts):
     return vwap, sd
 
 
+def swma(data):
+    """Symmetrically Weighted MA: weights [1,2,2,1]/6 over the last 4 bars."""
+    data = _f(data)
+    n = data.size
+    out = np.full(n, np.nan)
+    if n >= 4:
+        out[3:] = (data[:-3] + 2 * data[1:-2] + 2 * data[2:-1] + data[3:]) / 6.0
+    return out
+
+
+def rvi_vigor(open_, high, low, close, period):
+    open_, high, low, close = _f(open_), _f(high), _f(low), _f(close)
+    period = int(period)
+    sco = swma(close - open_)
+    shl = swma(high - low)
+    n = close.size
+    rvi = np.full(n, np.nan)
+    for i in range(period + 2, n):
+        ns = ds = 0.0
+        for j in range(i - period + 1, i + 1):
+            if not np.isnan(sco[j]):
+                ns += sco[j]
+            if not np.isnan(shl[j]):
+                ds += shl[j]
+        rvi[i] = ns / ds if ds != 0.0 else 0.0
+    return rvi, swma(rvi)
+
+
+def kst(data, roclen1, roclen2, roclen3, roclen4, smalen1, smalen2, smalen3, smalen4, siglen):
+    data = _f(data)
+    sm1 = _win_mean(roc_osc(data, roclen1), int(smalen1))
+    sm2 = _win_mean(roc_osc(data, roclen2), int(smalen2))
+    sm3 = _win_mean(roc_osc(data, roclen3), int(smalen3))
+    sm4 = _win_mean(roc_osc(data, roclen4), int(smalen4))
+    k = sm1 * 1 + sm2 * 2 + sm3 * 3 + sm4 * 4
+    return k, _win_mean(k, int(siglen))
+
+
+def tsi(data, long_period, short_period, signal_period):
+    data = _f(data)
+    pc = np.concatenate([[0.0], np.diff(data)])
+    apc = np.abs(pc)
+    pcs2 = ema(ema(pc, int(long_period)), int(short_period))
+    apcs2 = ema(ema(apc, int(long_period)), int(short_period))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        t = np.where(apcs2 != 0, 100 * (pcs2 / np.where(apcs2 == 0, 1.0, apcs2)), 0.0)
+    return t, ema(t, int(signal_period))
+
+
 def uo(high, low, close, period1, period2, period3):
     high, low, close = _f(high), _f(low), _f(close)
     n = close.size

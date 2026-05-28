@@ -75,11 +75,11 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 73,Oscillator,Detrended Price Osc,ta.dpo,DPO,oscillators.py,close,"period,is_centered",series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,Price minus shifted SMA
 74,Oscillator,Aroon Oscillator,ta.aroon_oscillator,AROONOSC,oscillators.py,"high,low",period,series,AROONOSC,No,Low,2,Migrated; parity PASS,bit-exact,AroonUp - AroonDown
 75,Oscillator,Stochastic RSI,ta.stochrsi,StochRSI,oscillators.py,close,"rsi_period,stoch_period,k,d","k,d",STOCHRSI,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,Stochastic applied to RSI
-76,Oscillator,Relative Vigor Index,ta.rvi,RVI,oscillators.py,"open,high,low,close",period,"rvi,signal",—,No,Medium,2,Not Started,1e-12 rel,SWMA ratio (note: name clash w/ volatility RVI)
+76,Oscillator,Relative Vigor Index,ta.rvi,RVI,oscillators.py,"open,high,low,close",period,"rvi,signal",—,No,Medium,2,Migrated; parity PASS,1e-12 rel,SWMA ratio (note: name clash w/ volatility RVI)
 77,Oscillator,Chaikin Oscillator,ta.cho,CHO,oscillators.py,"high,low,close,volume","fast,slow",series,ADOSC,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,EMA spread of ADL
 78,Oscillator,Choppiness Index,ta.chop,CHOP,oscillators.py,"high,low,close",period,series,—,No,Medium,2,Migrated; parity PASS,1e-12 rel,log(sumATR/range)/log(n)
-79,Oscillator,Know Sure Thing,ta.kst,KST,oscillators.py,close,"4x roclen,4x smalen,siglen","kst,signal",—,No,Medium,2,Not Started,1e-12 rel,Weighted smoothed ROC sum
-80,Oscillator,True Strength Index,ta.tsi,TSI,oscillators.py,close,"long,short,signal","tsi,signal",—,Yes,Medium,2,Not Started,1e-12 rel,Double-smoothed momentum
+79,Oscillator,Know Sure Thing,ta.kst,KST,oscillators.py,close,"4x roclen,4x smalen,siglen","kst,signal",—,No,Medium,2,Migrated; parity PASS,1e-12 rel,Weighted smoothed ROC sum
+80,Oscillator,True Strength Index,ta.tsi,TSI,oscillators.py,close,"long,short,signal","tsi,signal",—,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,Double-smoothed momentum
 81,Oscillator,Vortex Indicator,ta.vi,VI,oscillators.py,"high,low,close",period,"vi_plus,vi_minus",—,No,Medium,2,Not Started,1e-12 rel,VM+/VM- over sum TR
 82,Oscillator,Gator Oscillator,ta.gator_oscillator,GatorOscillator,oscillators.py,"high,low","jaw,teeth,lips","upper,lower",—,Yes,Medium,3,Not Started,1e-12 rel,Alligator line spreads
 83,Oscillator,Schaff Trend Cycle,ta.stc,STC,oscillators.py,close,"fast,slow,cycle,d1,d2",series,—,Yes,High,3,Not Started,1e-12 rel,MACD + double stochastic
