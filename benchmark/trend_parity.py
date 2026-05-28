@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+"""
+Trend moving-average parity: the migrated _backend implementations vs the ORIGINAL
+numba kernels (run pure-python via NUMBA_DISABLE_JIT) on real RELIANCE data.
+
+Covers the composite/standalone trend MAs whose wrappers were swapped to Rust:
+vwma, kama (TV), zlema, t3, trima, plus dema/tema/hma which compose the already
+bit-exact ema/wma kernels (checked for finiteness + identical NaN mask vs a
+utils.ema reconstruction).
+"""
+import os
+os.environ.setdefault("NUMBA_DISABLE_JIT", "1")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import numpy as np
+import pandas as pd
+
+from openalgo.indicators import _backend as b
+from openalgo.indicators import utils as u
+from openalgo.indicators.trend import KAMA, ZLEMA, T3, TRIMA
+from openalgo import ta
+
+DATA = Path(__file__).resolve().parent / "data"
+FAILS = []
+
+
+def cmp(name, got, ref, tol=0.0):
+    got = np.asarray(got, np.float64)
+    ref = np.asarray(ref, np.float64)
+    ok_shape = got.shape == ref.shape
+    na, nb = np.isnan(got), np.isnan(ref)
+    nan_ok = np.array_equal(na, nb)
+    m = ~(na | nb)
+    d = float(np.abs(got[m] - ref[m]).max()) if m.any() else 0.0
+    ok = ok_shape and nan_ok and d <= tol
+    print(f"  [{'PASS' if ok else 'FAIL'}] {name:18} maxdiff={d:.3e} nan_ok={nan_ok}")
+    if not ok:
+        FAILS.append(name)
+
+
+def main():
+    df = pd.read_csv(DATA / "RELIANCE_D.csv", index_col=0)
+    c = df["close"].to_numpy(np.float64)
+    v = df["volume"].to_numpy(np.float64)
+
+    # Direct ports vs original numba kernels (bit-exact target)
+    cmp("vwma(20)", b.vwma(c, v, 20), u.vwma_optimized(c, v, 20))
+    # KAMA is recursive EMA-family (target 1e-12 rel); ~1e-13 abs drift is expected.
+    cmp("kama_tv(14)", b.kama_tv(c, 14, 2, 30), KAMA._calculate_kama_tv(c, 14, 2, 30), tol=1e-9)
+    cmp("zlema(14)", b.zlema(c, 14), ZLEMA._calculate_zlema_optimized(c, 14))
+    gd1 = T3._calculate_gd(c, 21, 0.7)
+    gd2 = T3._calculate_gd(gd1, 21, 0.7)
+    t3ref = T3._calculate_gd(gd2, 21, 0.7)
+    cmp("t3(21,0.7)", b.t3(c, 21, 0.7), t3ref)
+    cmp("trima(20)", b.trima(c, 20), TRIMA._calculate_trima(c, 20))
+
+    # Compositions of bit-exact ema/wma: reference rebuilt with utils.ema/wma logic
+    cmp("dema(20)", ta.dema(c, 20), _dema_ref(c, 20))
+    cmp("tema(20)", ta.tema(c, 20), _tema_ref(c, 20))
+    cmp("hma(20)", ta.hma(c, 20), _hma_ref(c, 20))
+
+    print("\nRESULT:", "ALL TREND PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
+    return 1 if FAILS else 0
+
+
+def _dema_ref(data, period):
+    e1 = u.ema(data, period)
+    fv = period - 1
+    e2 = np.full_like(data, np.nan)
+    p2 = u.ema(e1[fv:], period)
+    s = fv + period - 1
+    e2[s:] = p2[period - 1:period - 1 + (len(data) - s)]
+    return 2 * e1 - e2
+
+
+def _tema_ref(data, period):
+    e1 = u.ema(data, period)
+    fv = period - 1
+    e2 = np.full_like(data, np.nan)
+    p2 = u.ema(e1[fv:], period)
+    s = fv + period - 1
+    e2[s:] = p2[period - 1:period - 1 + (len(data) - s)]
+    e3 = np.full_like(data, np.nan)
+    ve2 = e2[s:]
+    clean = ve2[~np.isnan(ve2)]
+    p3 = u.ema(clean, period)
+    s3 = s + period - 1
+    e3[s3:] = p3[period - 1:period - 1 + (len(data) - s3)]
+    return 3 * e1 - 3 * e2 + e3
+
+
+def _hma_ref(data, period):
+    from openalgo.indicators.trend import WMA
+    w = WMA()
+    wh = w.calculate(data, period // 2)
+    wf = w.calculate(data, period)
+    diff = 2 * wh - wf
+    return w.calculate(diff, int(np.sqrt(period)))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

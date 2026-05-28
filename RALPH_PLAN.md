@@ -74,7 +74,13 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   - [x] FP-association fix: running-sum kernels (sma/rolling_sum/stdev/variance/
         vwma/cci) rewritten to Python's exact left-to-right association -> now
         BIT-EXACT (0.0) vs the reference, not just within tolerance.
-  - [ ] Swap remaining trend MAs (dema/tema/trima/hma/vwma/zlema/t3/kama).
+  - [x] Trend MAs migrated: DEMA, TEMA, TRIMA, HMA, VWMA, ZLEMA, T3, KAMA.
+        New rust kernel kama_tv (TradingView ER variant; cargo 18/18). vwma/zlema/
+        t3/dema/tema/hma bit-exact (0.0); trima via numpy per-window np.mean
+        (bit-exact, numba-free); kama_tv ~4.5e-13 abs (recursive, within 1e-12 rel).
+        benchmark/trend_parity.py added (all PASS). 18 indicators migrated total.
+  - [ ] Continue: ALMA + remaining trend (supertrend/ichimoku/frama/mcginley/vidya/
+        ckstop/alligator/ma_envelopes), then volatility/volume/oscillators/stats/hybrid.
 
   LOCAL BUILD METHOD (until maturin/CI phase): from rust/ run
   `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build --release -p oa_py`

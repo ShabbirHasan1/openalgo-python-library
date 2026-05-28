@@ -190,7 +190,7 @@ class DEMA(BaseIndicator):
         self.validate_period(period, len(validated_data))
         
         # Calculate first EMA using consolidated utility
-        ema1_data = ema(validated_data, period)
+        ema1_data = _backend.ema(validated_data, period)
         
         # For second EMA, skip NaN values from first EMA
         # Find first valid index in ema1
@@ -201,7 +201,7 @@ class DEMA(BaseIndicator):
         
         # Extract valid portion for second EMA calculation
         valid_ema1 = ema1_data[first_valid:]
-        ema2_partial = ema(valid_ema1, period)
+        ema2_partial = _backend.ema(valid_ema1, period)
         
         # Reconstruct full ema2 array
         ema2_data = np.full_like(validated_data, np.nan)
@@ -248,7 +248,7 @@ class TEMA(BaseIndicator):
         self.validate_period(period, len(validated_data))
         
         # Calculate first EMA
-        ema1_data = ema(validated_data, period)
+        ema1_data = _backend.ema(validated_data, period)
         
         # Calculate second EMA from valid portion of first EMA
         first_valid = period - 1
@@ -257,7 +257,7 @@ class TEMA(BaseIndicator):
             return self.format_output(result, input_type, index)
         
         valid_ema1 = ema1_data[first_valid:]
-        ema2_partial = ema(valid_ema1, period)
+        ema2_partial = _backend.ema(valid_ema1, period)
         
         # Reconstruct full ema2 array
         ema2_data = np.full_like(validated_data, np.nan)
@@ -273,7 +273,7 @@ class TEMA(BaseIndicator):
             # Remove NaN values
             valid_ema2_clean = valid_ema2[~np.isnan(valid_ema2)]
             if len(valid_ema2_clean) >= period:
-                ema3_partial = ema(valid_ema2_clean, period)
+                ema3_partial = _backend.ema(valid_ema2_clean, period)
                 third_valid_start = second_valid_start + period - 1
                 if third_valid_start < len(ema3_data):
                     valid_length = min(len(ema3_partial[period-1:]), len(ema3_data) - third_valid_start)
@@ -636,8 +636,8 @@ class VWMA(BaseIndicator):
     
     @staticmethod
     def _calculate_vwma(data: np.ndarray, volume: np.ndarray, period: int) -> np.ndarray:
-        """O(n) optimized VWMA calculation using utils"""
-        return vwma_optimized(data, volume, period)
+        """O(n) optimized VWMA calculation using the Rust backend"""
+        return _backend.vwma(data, volume, period)
     
     def calculate(self, data: Union[np.ndarray, pd.Series, list],
                  volume: Union[np.ndarray, pd.Series, list],
@@ -841,7 +841,7 @@ class KAMA(BaseIndicator):
         if fast_length >= slow_length:
             raise ValueError("Fast length must be less than slow length")
         
-        result = self._calculate_kama_tv(validated_data, length, fast_length, slow_length)
+        result = _backend.kama_tv(validated_data, length, fast_length, slow_length)
         return self.format_output(result, input_type, index)
 
 
@@ -878,7 +878,7 @@ class ZLEMA(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_zlema_optimized(validated_data, period)
+        result = _backend.zlema(validated_data, period)
         return self.format_output(result, input_type, index)
     
     @staticmethod
@@ -957,11 +957,7 @@ class T3(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Apply GD three times
-        gd1 = self._calculate_gd(validated_data, period, v_factor)
-        gd2 = self._calculate_gd(gd1, period, v_factor)
-        result = self._calculate_gd(gd2, period, v_factor)
-        
+        result = _backend.t3(validated_data, period, v_factor)
         return self.format_output(result, input_type, index)
 
 
@@ -1308,7 +1304,7 @@ class TRIMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_trima(validated_data, period)
+        result = _backend.trima(validated_data, period)
         return self.format_output(result, input_type, index)
 
 

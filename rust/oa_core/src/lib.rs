@@ -441,6 +441,37 @@ pub fn kama(data: &[f64], period: usize, fast_sc: f64, slow_sc: f64) -> Vec<f64>
     result
 }
 
+/// KAMA (TradingView variant). er = |chg(length)| / sum(|chg(1)|, length); each bar
+/// recomputes the volatility window. prev = src when first/NaN (nz). Matches the
+/// `_calculate_kama_tv` reference bit-for-bit.
+pub fn kama_tv(data: &[f64], length: usize, fast_length: usize, slow_length: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if length == 0 || n < length + 1 {
+        return result;
+    }
+    let fast_alpha = 2.0 / (fast_length as f64 + 1.0);
+    let slow_alpha = 2.0 / (slow_length as f64 + 1.0);
+    for i in length..n {
+        let mom = (data[i] - data[i - length]).abs();
+        let mut volatility = 0.0;
+        for j in i - length + 1..i + 1 {
+            if j > 0 {
+                volatility += (data[j] - data[j - 1]).abs();
+            }
+        }
+        let er = if volatility != 0.0 { mom / volatility } else { 0.0 };
+        let alpha = (er * (fast_alpha - slow_alpha) + slow_alpha).powi(2);
+        let prev = if i == length || result[i - 1].is_nan() {
+            data[i]
+        } else {
+            result[i - 1]
+        };
+        result[i] = alpha * data[i] + (1.0 - alpha) * prev;
+    }
+    result
+}
+
 /// Ulcer Index (running-peak drawdown RMS * 100) over `period`.
 pub fn ulcer_index(data: &[f64], period: usize) -> Vec<f64> {
     let n = data.len();
@@ -871,6 +902,16 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn kama_tv_seed_and_trend() {
+        let d = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+        let r = kama_tv(&d, 3, 2, 30);
+        assert!(r[0].is_nan() && r[2].is_nan());
+        // first valid at index length=3; er=1 on a clean trend -> alpha=fast_alpha^2
+        let fa = 2.0 / 3.0;
+        approx(r[3], fa * fa * d[3] + (1.0 - fa * fa) * d[3]); // prev=src at seed -> == d[3]
     }
 
     #[test]

@@ -214,6 +214,90 @@ def williams_r(high, low, close, period):
     return out
 
 
+def vwma(data, volume, period):
+    data, volume = _f(data), _f(volume)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.vwma(data, volume, period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period:
+        return out
+    pv = data * volume
+    spv = np.convolve(pv, np.ones(period), "valid")
+    sv = np.convolve(volume, np.ones(period), "valid")
+    vals = np.where(sv > 0, spv / np.where(sv == 0, 1, sv), data[period - 1:])
+    out[period - 1:] = vals
+    return out
+
+
+def zlema(data, period):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    lag = (period - 1) // 2
+    adjusted = data.copy()
+    if lag > 0:
+        adjusted[lag:] = 2.0 * data[lag:] - data[:n - lag]
+    return ema(adjusted, period)
+
+
+def t3(data, period, v_factor):
+    data = _f(data)
+    period = int(period)
+
+    def gd(x):
+        e1 = ema(x, period)
+        e2 = ema(e1, period)
+        return (1.0 + v_factor) * e1 - v_factor * e2
+
+    return gd(gd(gd(data)))
+
+
+def kama_tv(data, length, fast_length, slow_length):
+    data = _f(data)
+    length, fast_length, slow_length = int(length), int(fast_length), int(slow_length)
+    if HAVE_RUST:
+        return _rs.kama_tv(data, length, fast_length, slow_length)
+    n = data.size
+    out = np.full(n, np.nan)
+    if length <= 0 or n < length + 1:
+        return out
+    fa = 2.0 / (fast_length + 1)
+    sa = 2.0 / (slow_length + 1)
+    for i in range(length, n):
+        mom = abs(data[i] - data[i - length])
+        vol = 0.0
+        for j in range(i - length + 1, i + 1):
+            if j > 0:
+                vol += abs(data[j] - data[j - 1])
+        er = mom / vol if vol != 0 else 0.0
+        alpha = (er * (fa - sa) + sa) ** 2
+        prev = data[i] if (i == length or np.isnan(out[i - 1])) else out[i - 1]
+        out[i] = alpha * data[i] + (1.0 - alpha) * prev
+    return out
+
+
+def trima(data, period):
+    """Triangular MA = SMA(SMA(.)) via per-window np.mean (matches reference)."""
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    n1 = (period + 1) // 2
+    n2 = period - n1 + 1
+    first = np.full(n, np.nan)
+    for i in range(n1 - 1, n):
+        first[i] = np.mean(data[i - n1 + 1:i + 1])
+    for i in range(n1 + n2 - 2, n):
+        if not np.isnan(first[i]):
+            window = first[max(0, i - n2 + 1):i + 1]
+            valid = window[~np.isnan(window)]
+            if len(valid) >= n2:
+                out[i] = np.mean(valid[-n2:])
+    return out
+
+
 def _roll(data, period, fn):
     """Rolling reduction for numpy fallbacks (NaN warm-up)."""
     n = data.size

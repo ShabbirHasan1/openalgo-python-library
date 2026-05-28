@@ -26,6 +26,7 @@ import pandas as pd
 import openalgo._oaindicators as rs
 from openalgo.indicators import utils as ref
 from openalgo.indicators.momentum import RSI as _RSI, Stochastic as _STO, CCI as _CCI, WilliamsR as _WR
+from openalgo.indicators.trend import KAMA as _KAMA
 
 try:
     import talib
@@ -143,6 +144,8 @@ def build_cases(P):
          lambda: _ref_stoch(h, l, c, per, 3, 3)[0], "f", None, ""),
         ("stoch_d", lambda: rs.stochastic(h, l, c, per, 3, 3)[1],
          lambda: _ref_stoch(h, l, c, per, 3, 3)[1], "f", None, ""),
+        ("kama_tv(14,2,30)", lambda: rs.kama_tv(c, 14, 2, 30),
+         lambda: _KAMA._calculate_kama_tv(c, 14, 2, 30), "f", None, ""),
     ]
     return cases
 

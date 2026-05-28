@@ -130,6 +130,19 @@ fn vwma<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (data, length, fast_length, slow_length))]
+fn kama_tv<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    length: usize,
+    fast_length: usize,
+    slow_length: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let out = oa_core::kama_tv(data.as_slice()?, length, fast_length, slow_length);
+    Ok(out.into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
 #[pyo3(signature = (data, period, fast_sc, slow_sc))]
 fn kama<'py>(
     py: Python<'py>,
@@ -233,6 +246,7 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(atr_sma, m)?)?;
     m.add_function(wrap_pyfunction!(vwma, m)?)?;
     m.add_function(wrap_pyfunction!(kama, m)?)?;
+    m.add_function(wrap_pyfunction!(kama_tv, m)?)?;
     m.add_function(wrap_pyfunction!(crossover, m)?)?;
     m.add_function(wrap_pyfunction!(crossunder, m)?)?;
     m.add_function(wrap_pyfunction!(cross, m)?)?;
