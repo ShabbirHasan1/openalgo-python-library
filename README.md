@@ -1,6 +1,6 @@
 # OpenAlgo Python Library
 
-A Python library for algorithmic trading using OpenAlgo's REST APIs and WebSocket feeds, with **100+ high-performance JIT-accelerated technical indicators**.
+A Python library for algorithmic trading using OpenAlgo's REST APIs and WebSocket feeds, with **100+ high-performance technical indicators powered by a Rust core**.
 
 - Python Library Docs: https://docs.openalgo.in/trading-platform/python
 - Technical Indicators (100+): https://docs.openalgo.in/trading-platform/python/indicators
@@ -14,12 +14,11 @@ A Python library for algorithmic trading using OpenAlgo's REST APIs and WebSocke
 To install the OpenAlgo Python library, use pip:
 
 ```bash
-# Trading API only
 pip install openalgo
-
-# JIT-accelerated indicators
-pip install openalgo[indicators]
 ```
+
+The 100+ technical indicators are built in (powered by a Rust core); no extra install
+step or optional dependency is required.
 
 ## Get the OpenAlgo apikey
 
@@ -49,10 +48,12 @@ openalgo.__version__
 
 ## Technical Indicators (100+)
 
-OpenAlgo ships **100+ JIT-accelerated technical indicators** powered by Numba — including trend, momentum, volatility, volume, oscillators, statistics, and hybrid indicators. Install the optional extra to enable them:
+OpenAlgo ships **100+ technical indicators** powered by a Rust core (via PyO3) —
+including trend, momentum, volatility, volume, oscillators, statistics, and hybrid
+indicators. They are built in; no optional dependency or extra install step:
 
 ```bash
-pip install openalgo[indicators]
+pip install openalgo
 ```
 
 Quick example:

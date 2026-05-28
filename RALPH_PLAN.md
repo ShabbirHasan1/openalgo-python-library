@@ -125,17 +125,20 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   backend (numpy fallback for per-window kernels). 7 parity suites + wrapper gate
   all green; `import openalgo` works without numba. ***
 
-- **Phase 3 — Cleanup / dependency removal** [NEXT]
-  - [ ] Delete openalgo/numba_shim.py; remove all `@jit`/`@njit` decorators and the
-        legacy `_calculate_*` numba staticmethods + numba imports across indicators/*.
-  - [ ] Replace utils.py numba kernels' usage: indicators now use _backend; keep
-        utils functions as thin numpy/_backend shims OR repoint to _backend (callers:
-        check momentum/volatility/trend still import a few from utils).
-  - [ ] Remove `_warmup()` numba precompile (or make it a no-op).
-  - [ ] setup.py: drop `extras_require={"indicators": [numba]}` and any numba mention;
-        keep numpy/pandas/httpx/websocket-client. Remove `pip install openalgo[indicators]`
-        from docs.
-  - [ ] Re-run ALL gates after cleanup; confirm no `numba`/`llvmlite` import anywhere.
+- **Phase 3 — Cleanup / dependency removal** [DONE]
+  - [x] numba_shim.py rewritten to a pure no-op (NO `from numba import`); jit/njit/
+        prange are passthroughs. `@jit` decorators now run functions interpreted.
+  - [x] openalgo/__init__.py: removed the `import numba` monkey-patch block.
+  - [x] _warmup() made a no-op (early return).
+  - [x] setup.py: removed `extras_require={"indicators": [numba]}`. install_requires
+        has no numba. README + docs: dropped `pip install openalgo[indicators]` and
+        "JIT/Numba" wording -> "Rust core".
+  - [x] `grep import numba|from numba|llvmlite openalgo/` -> NONE. `import openalgo`
+        works WITHOUT numba (numba never loaded). All 9 parity gates green.
+  NOTE: the dead legacy `_calculate_*` numba staticmethods + utils.py kernels are
+  intentionally KEPT (run interpreted) because the parity suites use them as the
+  reference. They are never called by the public API. A later optional pass can delete
+  them and freeze references to saved golden arrays.
 - **Phase 4 — Packaging + CI/CD** : maturin pyproject (mixed python+rust,
   module-name openalgo._oaindicators), GitHub Actions mirroring opengreeks (cargo test
   -> parity -> abi3 wheels linux/macos/windows + sdist -> PyPI on v* via OIDC).

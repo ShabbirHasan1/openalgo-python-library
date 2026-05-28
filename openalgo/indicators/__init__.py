@@ -1557,12 +1557,10 @@ ta = TechnicalAnalysis()
 # the cached bytecode and this function returns in < 1 ms.
 # ------------------------------------------------------------------
 def _warmup():
-    """Pre-compile the most frequently used Numba kernels.
+    """No-op. The Rust core needs no warm-up; kept as a stable symbol only."""
+    return
 
-    With cache=True the compiled code is persisted to disk — subsequent
-    imports just load the cached bytecode and this whole function
-    completes in < 5 ms.
-    """
+    # --- legacy numba pre-compile (dead; retained for reference) ---
     _c = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     _h = _c + 0.5
     _l = _c - 0.5

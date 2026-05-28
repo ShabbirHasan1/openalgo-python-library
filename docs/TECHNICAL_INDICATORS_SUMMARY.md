@@ -293,11 +293,13 @@ pip install openalgo
 ```
 
 Dependencies automatically installed:
-- `numpy>=1.21.0`
-- `numba>=0.54.0`
-- `pandas>=1.2.0`
-- `httpx>=0.23.0`
+- `numpy>=2.0.0`
+- `pandas>=2.2.0`
+- `httpx>=0.27.0`
 - `websocket-client>=1.8.0`
+
+Indicator math runs in a bundled Rust core (`openalgo._oaindicators`, via PyO3);
+numba/llvmlite are no longer required.
 
 ## 📈 Integration with OpenAlgo
 

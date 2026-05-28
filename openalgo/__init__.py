@@ -16,15 +16,12 @@ from .utilities import UtilitiesAPI
 from .indicators import ta
 
 # ------------------------------------------------------------------
-# Speed patch: upgrade all legacy @jit decorators project-wide
+# Indicator math runs in the Rust core (openalgo._oaindicators); numba/llvmlite
+# are no longer dependencies. The shim below keeps legacy decorator imports working.
 # ------------------------------------------------------------------
 from .numba_shim import jit as _jit_shim, prange as _prange, HAS_NUMBA  # noqa: E402
 
-if HAS_NUMBA:
-    import numba as _nb  # noqa: E402
-    _nb.jit = _jit_shim  # monkey-patch once at import time
-
-# Make shim available as openalgo.nbjit if users want it explicitly
+# Back-compat aliases for any user code that referenced these.
 nbjit = _jit_shim
 prange = _prange
 
