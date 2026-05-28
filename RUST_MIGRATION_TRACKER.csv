@@ -9,7 +9,7 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 8,Primitive,Lowest,ta.lowest,(util),utils.py,series,period,series,MIN,No,Low,1,Kernel parity PASS,bit-exact,Rolling min
 9,Primitive,Change,ta.change,(util),utils.py,"series,length",—,series,—,No,Low,1,Kernel parity PASS,bit-exact,n-period difference
 10,Primitive,Rate of Change,ta.roc,ROC,oscillators.py,close,period,series,ROC,No,Low,1,Kernel parity PASS,1e-12 rel,Percent change over period
-11,Primitive,Rolling Median,ta.median,MEDIAN,statistics.py,close,period,series,—,No,Low,1,Not Started,bit-exact,MedianBands dependency
+11,Primitive,Rolling Median,ta.median,MEDIAN,statistics.py,close,period,series,—,No,Low,1,Migrated; parity PASS,bit-exact,MedianBands dependency
 12,Trend,Double EMA,ta.dema,DEMA,trend.py,close,period,series,DEMA,Yes,Low,2,Migrated; parity PASS,1e-12 rel,2*EMA - EMA(EMA)
 13,Trend,Triple EMA,ta.tema,TEMA,trend.py,close,period,series,TEMA,Yes,Low,2,Migrated; parity PASS,1e-12 rel,Composite of EMA
 14,Trend,Triangular MA,ta.trima,TRIMA,trend.py,close,period,series,TRIMA,No,Low,2,Migrated; parity PASS,bit-exact,Double-smoothed SMA
@@ -84,14 +84,14 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 82,Oscillator,Gator Oscillator,ta.gator_oscillator,GatorOscillator,oscillators.py,"high,low","jaw,teeth,lips","upper,lower",—,Yes,Medium,3,Migrated; parity PASS,1e-12 rel,Alligator line spreads
 83,Oscillator,Schaff Trend Cycle,ta.stc,STC,oscillators.py,close,"fast,slow,cycle,d1,d2",series,—,Yes,High,3,Migrated; parity PASS,1e-12 rel,MACD + double stochastic
 84,Oscillator,Coppock Curve,ta.coppock,Coppock,oscillators.py,close,"wma_len,long_roc,short_roc",series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,WMA of summed ROC
-85,Statistics,Linear Regression,ta.linreg,LINREG,statistics.py,close,period,series,LINEARREG,No,Medium,2,Not Started,1e-12 rel,Rolling least-squares endpoint
-86,Statistics,Linear Reg Slope,ta.lrslope,LRSLOPE,statistics.py,close,"period,interval",series,LINEARREG_SLOPE,No,Medium,2,Not Started,1e-12 rel,Rolling regression slope
-87,Statistics,Correlation,ta.correlation,CORREL,statistics.py,"data1,data2",period,series,CORREL,No,Medium,2,Not Started,1e-12 rel,Rolling Pearson r
-88,Statistics,Beta,ta.beta,BETA,statistics.py,"asset,market",period,series,BETA,No,Medium,2,Not Started,1e-12 rel,Rolling covariance/variance
-89,Statistics,Variance,ta.variance,VAR,statistics.py,close,"lookback,mode,ema_period,...",var or components,VAR,Yes,High,2,Not Started,1e-12 rel,PR/LR variance + zscore filter
-90,Statistics,Time Series Forecast,ta.tsf,TSF,statistics.py,close,period,series,TSF,No,Medium,2,Not Started,1e-12 rel,Linreg endpoint+slope projection
-91,Statistics,Median Bands,ta.median_bands,MedianBands,statistics.py,"high,low,close","median_length,atr_length,atr_mult","mid,upper,lower,ema",—,Yes,Medium,3,Not Started,1e-12 rel,Rolling median +/- ATR
-92,Statistics,Mode,ta.mode,MODE,statistics.py,close,"period,bins",series,—,No,High,3,Not Started,1e-9 rel,Histogram-binned rolling mode
+85,Statistics,Linear Regression,ta.linreg,LINREG,statistics.py,close,period,series,LINEARREG,No,Medium,2,Migrated; parity PASS,1e-12 rel,Rolling least-squares endpoint
+86,Statistics,Linear Reg Slope,ta.lrslope,LRSLOPE,statistics.py,close,"period,interval",series,LINEARREG_SLOPE,No,Medium,2,Migrated; parity PASS,1e-12 rel,Rolling regression slope
+87,Statistics,Correlation,ta.correlation,CORREL,statistics.py,"data1,data2",period,series,CORREL,No,Medium,2,Migrated; parity PASS,1e-12 rel,Rolling Pearson r
+88,Statistics,Beta,ta.beta,BETA,statistics.py,"asset,market",period,series,BETA,No,Medium,2,Migrated; parity PASS,1e-12 rel,Rolling covariance/variance
+89,Statistics,Variance,ta.variance,VAR,statistics.py,close,"lookback,mode,ema_period,...",var or components,VAR,Yes,High,2,Migrated; parity PASS,1e-12 rel,PR/LR variance + zscore filter
+90,Statistics,Time Series Forecast,ta.tsf,TSF,statistics.py,close,period,series,TSF,No,Medium,2,Migrated; parity PASS,1e-12 rel,Linreg endpoint+slope projection
+91,Statistics,Median Bands,ta.median_bands,MedianBands,statistics.py,"high,low,close","median_length,atr_length,atr_mult","mid,upper,lower,ema",—,Yes,Medium,3,Migrated; parity PASS,1e-12 rel,Rolling median +/- ATR
+92,Statistics,Mode,ta.mode,MODE,statistics.py,close,"period,bins",series,—,No,High,3,Migrated; parity PASS,1e-9 rel,Histogram-binned rolling mode
 93,Hybrid,Average Directional Index,ta.adx,ADX,hybrid.py,"high,low,close",period,"plus_di,minus_di,adx",ADX,Yes,Medium,2,Not Started,1e-12 rel,Wilder DI/DX smoothing
 94,Hybrid,Aroon,ta.aroon,Aroon,hybrid.py,"high,low",period,"up,down",AROON,No,Low,2,Not Started,bit-exact,Periods since hi/lo
 95,Hybrid,Directional Movement Index,ta.dmi,DMI,hybrid.py,"high,low,close",period,"plus_di,minus_di",DX,Yes,Medium,2,Not Started,1e-12 rel,+DI/-DI (ADX subset)

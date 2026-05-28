@@ -615,6 +615,194 @@ def session_vwap(source, volume, starts):
     return vwap, sd
 
 
+def _linreg_end(y, period):
+    x = np.arange(period)
+    sx = np.sum(x)
+    sy = np.sum(y)
+    sxy = np.sum(x * y)
+    sx2 = np.sum(x * x)
+    den = period * sx2 - sx * sx
+    if den != 0:
+        slope = (period * sxy - sx * sy) / den
+        intercept = (sy - slope * sx) / period
+        return slope, intercept
+    return None, None
+
+
+def linreg(data, period):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        y = data[i - period + 1:i + 1]
+        slope, intercept = _linreg_end(y, period)
+        out[i] = slope * (period - 1) + intercept if slope is not None else y[-1]
+    return out
+
+
+def lrslope(data, period, interval):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+
+    def endval(y):
+        slope, intercept = _linreg_end(y, period)
+        return slope * (period - 1) + intercept if slope is not None else y[-1]
+
+    for i in range(period, n):
+        out[i] = (endval(data[i - period + 1:i + 1]) - endval(data[i - period:i])) / interval
+    return out
+
+
+def tsf(data, period):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        y = data[i - period + 1:i + 1]
+        slope, intercept = _linreg_end(y, period)
+        out[i] = slope * period + intercept if slope is not None else y[-1]
+    return out
+
+
+def correl(data1, data2, period):
+    data1, data2 = _f(data1), _f(data2)
+    period = int(period)
+    n = data1.size
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        x = data1[i - period + 1:i + 1]
+        y = data2[i - period + 1:i + 1]
+        mx, my = np.mean(x), np.mean(y)
+        num = np.sum((x - mx) * (y - my))
+        den = np.sqrt(np.sum((x - mx) ** 2) * np.sum((y - my) ** 2))
+        out[i] = num / den if den > 0 else 0.0
+    return out
+
+
+def beta(asset, market, period):
+    asset, market = _f(asset), _f(market)
+    period = int(period)
+    n = asset.size
+    out = np.full(n, np.nan)
+    ar = np.full(n, np.nan)
+    mr = np.full(n, np.nan)
+    ar[1:] = asset[1:] - asset[:-1]
+    mr[1:] = market[1:] - market[:-1]
+    for i in range(period, n):
+        aw = ar[i - period + 1:i + 1]
+        mw = mr[i - period + 1:i + 1]
+        ma, mm = np.mean(aw), np.mean(mw)
+        cov = mvar = 0.0
+        for j in range(period):
+            ad = aw[j] - ma
+            md = mw[j] - mm
+            cov += ad * md
+            mvar += md * md
+        cov /= period
+        mvar /= period
+        out[i] = cov / mvar if mvar > 0 else 0.0
+    return out
+
+
+def variance(data, lookback, mode, ema_period, filter_lookback, ema_length, return_components):
+    data = _f(data)
+    lookback = int(lookback)
+    n = data.size
+    source = np.full(n, np.nan)
+    if mode == "LR":
+        with np.errstate(invalid="ignore", divide="ignore"):
+            valid = (data[1:] > 0) & (data[:-1] > 0)
+        idx = np.arange(1, n)
+        ratio = np.empty(n - 1)
+        ratio[:] = np.nan
+        ratio[valid] = np.log(data[1:][valid] / data[:-1][valid]) * 100
+        source[1:] = ratio
+    else:
+        source = data.copy()
+    var = np.full(n, np.nan)
+    sd = np.full(n, np.nan)
+    if n >= lookback and lookback > 1:
+        rs = rsq = 0.0
+        for i in range(lookback):
+            if not np.isnan(source[i]):
+                rs += source[i]
+                rsq += source[i] * source[i]
+        mean = rs / lookback
+        v = (rsq - lookback * mean * mean) / (lookback - 1)
+        if v >= 0:
+            var[lookback - 1] = v
+            sd[lookback - 1] = np.sqrt(v)
+        for i in range(lookback, n):
+            old, new = source[i - lookback], source[i]
+            if not np.isnan(old):
+                rs -= old
+                rsq -= old * old
+            if not np.isnan(new):
+                rs += new
+                rsq += new * new
+            mean = rs / lookback
+            v = (rsq - lookback * mean * mean) / (lookback - 1)
+            if v >= 0:
+                var[i] = v
+                sd[i] = np.sqrt(v)
+    if not return_components:
+        return var
+    ema_var = ema(var, int(ema_period))
+    var_sma = sma(var, int(filter_lookback))
+    var_sd = stdev(var, int(filter_lookback))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        zscore = np.where((~np.isnan(var)) & (~np.isnan(var_sma)) & (~np.isnan(var_sd)) & (var_sd > 0),
+                          (var - var_sma) / np.where(var_sd == 0, 1.0, var_sd), np.nan)
+    ema_z = ema(zscore, int(ema_length))
+    return var, ema_var, zscore, ema_z, sd
+
+
+def median(data, period):
+    return _roll(_f(data), int(period), np.median)
+
+
+def _median_pnr(data, period):
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        w = np.sort(data[i - period + 1:i + 1])
+        out[i] = w[period // 2] if period % 2 == 1 else w[period // 2 - 1]
+    return out
+
+
+def median_bands(high, low, close, source, median_length, atr_length, atr_mult):
+    high, low, close = _f(high), _f(low), _f(close)
+    src = (high + low) / 2.0 if source is None else _f(source)
+    med = _median_pnr(src, int(median_length))
+    atr = atr_wilder(high, low, close, int(atr_length)) * atr_mult
+    return med, med + atr, med - atr, ema_first_valid(med, int(median_length))
+
+
+def mode(data, period, bins):
+    data = _f(data)
+    period, bins = int(period), int(bins)
+    n = data.size
+    out = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        w = data[i - period + 1:i + 1]
+        mn, mx = np.min(w), np.max(w)
+        if mx > mn:
+            bw = (mx - mn) / bins
+            bi = ((w - mn) / bw).astype(np.int32)
+            bi = np.clip(bi, 0, bins - 1)
+            counts = np.bincount(bi, minlength=bins)
+            mode_bin = np.argmax(counts)
+            out[i] = mn + (mode_bin + 0.5) * bw
+        else:
+            out[i] = w[0]
+    return out
+
+
 def vi(high, low, close, period):
     high, low, close = _f(high), _f(low), _f(close)
     period = int(period)

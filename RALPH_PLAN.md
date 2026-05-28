@@ -115,8 +115,11 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         via 100*(pcs2/apcs2) association).
   - [x] Oscillators batch 2c: VI, GatorOscillator, STC, Coppock. All bit-exact.
         **OSCILLATORS MODULE COMPLETE (20/20).**
-  - [ ] statistics / hybrid modules.
-        78 of ~90 indicators migrated. (TREND,MOMENTUM,VOLATILITY,VOLUME,OSCILLATORS done.)
+  - [x] Statistics module: LINREG, LRSLOPE, CORREL, BETA, VAR, TSF, MEDIAN,
+        MedianBands, MODE. Per-window numpy in _backend (bit-exact, numba-free).
+        All bit-exact (statistics_parity.py). **STATISTICS MODULE COMPLETE (9/9).**
+  - [ ] hybrid module: ADX, Aroon, PivotPoints, SAR, DMI, WilliamsFractals, RWI, ZigZag.
+        87 of ~90 indicators migrated. (Only hybrid module left, then Phase 3+4.)
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
         Phase 3 cleanup along with all remaining _calculate_* numba staticmethods.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);
