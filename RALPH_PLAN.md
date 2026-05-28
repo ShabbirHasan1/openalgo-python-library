@@ -89,8 +89,13 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   - [x] Momentum complete (9/9): + BOP, ElderRay, Fisher, CRSI. New kernels bop/
         fisher/updown_streak/percent_rank (cargo 28/28); elderray/crsi composed.
         All bit-exact (benchmark/momentum_parity.py). **MOMENTUM MODULE COMPLETE.**
-  - [ ] volatility / volume / oscillators / statistics / hybrid modules.
-        31 of ~90 indicators migrated.
+  - [x] Volatility batch 1: Keltner, Donchian, Chaikin, NATR, ULTOSC, RVI(vol).
+        New kernel ema_sma (SMA-seeded 2/(p+1) EMA, used by Keltner+Chaikin); rest
+        composed (donchian=hi/lo, natr=atr/close, ultosc=rolling_sum). All bit-exact
+        except ULTOSC 3.2e-13 (rolling_sum vs np.sum). benchmark/volatility_parity.py.
+  - [ ] Volatility batch 2: MASS, BBPercent, BBWidth, ChandelierExit, HistoricalVol,
+        UlcerIndex, STARC, TRANGE. Then volume / oscillators / statistics / hybrid.
+        36 of ~90 indicators migrated.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);
         add numpy fallbacks in a later polish pass.
 

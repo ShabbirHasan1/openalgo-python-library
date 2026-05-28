@@ -37,19 +37,19 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 36,Momentum,Fisher Transform,ta.fisher,Fisher,momentum.py,"high,low",length,"fisher,trigger",—,Yes,High,3,Migrated; parity PASS,1e-12 rel,Recursive normalize + transform
 37,Momentum,Connors RSI,ta.crsi,CRSI,momentum.py,close,"lenrsi,lenupdown,lenroc",series,—,Yes,High,3,Migrated; parity PASS,1e-12 rel,Composite RSI+streak+ROC rank
 38,Volatility,Average True Range,ta.atr,ATR,volatility.py,"high,low,close",period,series,ATR,Yes,Low,2,Migrated; parity PASS,1e-12 rel,RMA of True Range
-39,Volatility,Normalized ATR,ta.natr,NATR,volatility.py,"high,low,close",period,series,NATR,Yes,Low,2,Not Started,1e-12 rel,ATR as percent of close
+39,Volatility,Normalized ATR,ta.natr,NATR,volatility.py,"high,low,close",period,series,NATR,Yes,Low,2,Migrated; parity PASS,1e-12 rel,ATR as percent of close
 40,Volatility,Bollinger Bands,ta.bbands,BollingerBands,volatility.py,close,"period,std_dev","upper,mid,lower",BBANDS,No,Low,2,Migrated; parity PASS,1e-12 rel,SMA +/- k*stdev
 41,Volatility,Bollinger %B,ta.bbpercent,BBPercent,volatility.py,close,"period,std_dev",series,—,No,Low,2,Not Started,1e-12 rel,Position within bands
 42,Volatility,Bollinger Bandwidth,ta.bbwidth,BBWidth,volatility.py,close,"period,std_dev",series,—,No,Low,2,Not Started,1e-12 rel,Band width / mid
-43,Volatility,Keltner Channel,ta.keltner,Keltner,volatility.py,"high,low,close","ema_period,atr_period,multiplier","upper,mid,lower",—,Yes,Medium,2,Not Started,1e-12 rel,EMA +/- ATR multiple
-44,Volatility,Donchian Channel,ta.donchian,Donchian,volatility.py,"high,low",period,"upper,mid,lower",—,No,Low,2,Not Started,bit-exact,Rolling hi/lo
-45,Volatility,Chaikin Volatility,ta.chaikin,Chaikin,volatility.py,"high,low","ema_period,roc_period",series,—,Yes,Medium,2,Not Started,1e-12 rel,ROC of EMA(high-low)
+43,Volatility,Keltner Channel,ta.keltner,Keltner,volatility.py,"high,low,close","ema_period,atr_period,multiplier","upper,mid,lower",—,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,EMA +/- ATR multiple
+44,Volatility,Donchian Channel,ta.donchian,Donchian,volatility.py,"high,low",period,"upper,mid,lower",—,No,Low,2,Migrated; parity PASS,bit-exact,Rolling hi/lo
+45,Volatility,Chaikin Volatility,ta.chaikin,Chaikin,volatility.py,"high,low","ema_period,roc_period",series,—,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,ROC of EMA(high-low)
 46,Volatility,Mass Index,ta.massindex,MASS,volatility.py,"high,low",length,series,—,Yes,Medium,2,Not Started,1e-12 rel,EMA ratio sum (Pine v6)
 47,Volatility,Chandelier Exit,ta.chandelier_exit,ChandelierExit,volatility.py,"high,low,close","period,multiplier","long,short",—,Yes,High,3,Not Started,bit-exact,ATR trailing stop
 48,Volatility,Historical Volatility,ta.hv,HistoricalVolatility,volatility.py,close,"length,annual,per",series,—,No,Medium,3,Not Started,1e-12 rel,Annualized stdev of log returns
 49,Volatility,Ulcer Index,ta.ulcerindex,UlcerIndex,volatility.py,close,"length,smooth,signal,type",series,—,No,Medium,3,Not Started,1e-12 rel,Drawdown-based risk measure
 50,Volatility,STARC Bands,ta.starc,STARC,volatility.py,"high,low,close","ma_period,atr_period,multiplier","upper,mid,lower",—,Yes,Medium,3,Not Started,1e-12 rel,SMA +/- ATR multiple
-51,Volatility,Ultimate Oscillator,ta.ultimate_oscillator,ULTOSC,volatility.py,"high,low,close","period1,period2,period3",series,ULTOSC,No,Medium,2,Not Started,1e-12 rel,Weighted multi-period BP/TR
+51,Volatility,Ultimate Oscillator,ta.ultimate_oscillator,ULTOSC,volatility.py,"high,low,close","period1,period2,period3",series,ULTOSC,No,Medium,2,Migrated; parity PASS,1e-12 rel,Weighted multi-period BP/TR
 52,Volume,On Balance Volume,ta.obv,OBV,volume.py,"close,volume",—,series,OBV,Yes,Low,2,Not Started,bit-exact,Cumulative signed volume
 53,Volume,OBV Smoothed,ta.obv_smoothed,OBVSmoothed,volume.py,"close,volume","ma_type,ma_length,bb_length,bb_mult","obv,bb_upper,bb_lower",—,Yes,Medium,2,Not Started,1e-12 rel,OBV + optional MA/BB overlay
 53b,Volume,VWAP,ta.vwap,VWAP,volume.py,"high,low,close,volume","anchor,source,band mults",series,—,No,High,3,Not Started,1e-9 rel,Session-anchored; bands; needs timestamps

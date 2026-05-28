@@ -31,6 +31,7 @@ wrap_period!(rolling_variance, oa_core::rolling_variance);
 wrap_period!(stdev, oa_core::stdev);
 wrap_period!(ema, oa_core::ema);
 wrap_period!(ema_wilder, oa_core::ema_wilder);
+wrap_period!(ema_sma, oa_core::ema_sma);
 wrap_period!(highest, oa_core::highest);
 wrap_period!(lowest, oa_core::lowest);
 wrap_period!(change, oa_core::change);
@@ -355,6 +356,7 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(stdev, m)?)?;
     m.add_function(wrap_pyfunction!(ema, m)?)?;
     m.add_function(wrap_pyfunction!(ema_wilder, m)?)?;
+    m.add_function(wrap_pyfunction!(ema_sma, m)?)?;
     m.add_function(wrap_pyfunction!(highest, m)?)?;
     m.add_function(wrap_pyfunction!(lowest, m)?)?;
     m.add_function(wrap_pyfunction!(change, m)?)?;

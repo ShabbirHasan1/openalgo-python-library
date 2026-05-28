@@ -248,7 +248,7 @@ class Keltner(BaseIndicator):
         if multiplier <= 0:
             raise ValueError(f"Multiplier must be positive, got {multiplier}")
         
-        results = self._calculate_keltner_channel(high_data, low_data, close_data, ema_period, atr_period, multiplier)
+        results = _backend.keltner(high_data, low_data, close_data, ema_period, atr_period, multiplier)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -308,7 +308,7 @@ class Donchian(BaseIndicator):
         high_data, low_data = self.align_arrays(high_data, low_data)
         self.validate_period(period, len(high_data))
         
-        results = self._calculate_donchian_channel(high_data, low_data, period)
+        results = _backend.donchian(high_data, low_data, period)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -370,18 +370,7 @@ class Chaikin(BaseIndicator):
         
         high_data, low_data = self.align_arrays(high_data, low_data)
         
-        # Calculate high-low range
-        hl_range = high_data - low_data
-        
-        # Calculate EMA of the range
-        ema_range = self._calculate_ema(hl_range, int(ema_period))
-        
-        # Calculate rate of change
-        cv = np.full_like(ema_range, np.nan)
-        for i in range(int(roc_period), len(ema_range)):
-            if ema_range[i - int(roc_period)] != 0:
-                cv[i] = ((ema_range[i] - ema_range[i - int(roc_period)]) / ema_range[i - int(roc_period)]) * 100
-        
+        cv = _backend.chaikin(high_data, low_data, ema_period, roc_period)
         return self.format_output(cv, input_type, index)
 
 
@@ -422,13 +411,8 @@ class NATR(BaseIndicator):
             NATR values in the same format as input
         """
         close_data, input_type, index = self.validate_input(close)
-        
-        # Calculate ATR
-        atr = self._atr.calculate(high, low, close, period)
-        
-        # Calculate NATR using vectorized operations (O(n) optimization)
-        natr = np.where(close_data != 0, (atr / close_data) * 100, 0)
-        
+
+        natr = _backend.natr(high, low, close, period)
         return self.format_output(natr, input_type, index)
 
 
@@ -512,12 +496,7 @@ class RVI(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Calculate rolling standard deviation
-        stdev = self._calculate_stdev(validated_data, stdev_period)
-        
-        # Calculate RSI on standard deviation
-        result = self._calculate_rsi_on_stdev(stdev, rsi_period)
-        
+        result = _backend.rvi_volatility(validated_data, stdev_period, rsi_period)
         return self.format_output(result, input_type, index)
 
 
@@ -608,7 +587,7 @@ class ULTOSC(BaseIndicator):
         
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         
-        result = self._calculate_ultosc(high_data, low_data, close_data, period1, period2, period3)
+        result = _backend.ultosc(high_data, low_data, close_data, period1, period2, period3)
         return self.format_output(result, input_type, index)
 
 

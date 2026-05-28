@@ -491,6 +491,92 @@ def _roll(data, period, fn):
     return out
 
 
+def ema_sma(data, period):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.ema_sma(data, period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period:
+        return out
+    alpha = 2.0 / (period + 1.0)
+    out[period - 1] = data[:period].sum() / period
+    for i in range(period, n):
+        out[i] = alpha * data[i] + (1.0 - alpha) * out[i - 1]
+    return out
+
+
+def rolling_sum(data, period):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.rolling_sum(data, period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period:
+        return out
+    c = np.cumsum(data)
+    out[period - 1] = c[period - 1]
+    if n > period:
+        out[period:] = c[period:] - c[:-period]
+    return out
+
+
+def keltner(high, low, close, ema_period, atr_period, multiplier):
+    high, low, close = _f(high), _f(low), _f(close)
+    middle = ema_sma(close, int(ema_period))
+    atr = atr_wilder(high, low, close, int(atr_period))
+    upper = middle + multiplier * atr
+    lower = middle - multiplier * atr
+    return upper, middle, lower
+
+
+def donchian(high, low, period):
+    high, low = _f(high), _f(low)
+    upper = highest(high, int(period))
+    lower = lowest(low, int(period))
+    return upper, (upper + lower) / 2.0, lower
+
+
+def chaikin(high, low, ema_period, roc_period):
+    high, low = _f(high), _f(low)
+    er = ema_sma(high - low, int(ema_period))
+    return roc(er, int(roc_period))
+
+
+def natr(high, low, close, period):
+    high, low, close = _f(high), _f(low), _f(close)
+    atr = atr_wilder(high, low, close, int(period))
+    return np.where(close != 0, (atr / close) * 100.0, 0.0)
+
+
+def rvi_volatility(data, stdev_period, rsi_period):
+    data = _f(data)
+    return rsi(stdev(data, int(stdev_period)), int(rsi_period))
+
+
+def ultosc(high, low, close, period1, period2, period3):
+    high, low, close = _f(high), _f(low), _f(close)
+    n = close.size
+    tr = true_range(high, low, close)
+    bp = np.empty(n)
+    if n:
+        bp[0] = close[0] - min(low[0], close[0])
+        bp[1:] = close[1:] - np.minimum(low[1:], close[:-1])
+
+    def raw(p):
+        bps = rolling_sum(bp, p)
+        trs = rolling_sum(tr, p)
+        return np.where(trs > 0, bps / np.where(trs == 0, 1.0, trs), 0.0)
+
+    r1, r2, r3 = raw(int(period1)), raw(int(period2)), raw(int(period3))
+    out = 100.0 * (4 * r1 + 2 * r2 + r3) / 7.0
+    mp = max(int(period1), int(period2), int(period3))
+    out[:mp - 1] = np.nan
+    return out
+
+
 def highest(data, period):
     data = _f(data)
     if HAVE_RUST:

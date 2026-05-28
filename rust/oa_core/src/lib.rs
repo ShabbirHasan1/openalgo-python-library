@@ -158,6 +158,26 @@ pub fn wma(data: &[f64], period: usize) -> Vec<f64> {
     result
 }
 
+/// SMA-seeded EMA: alpha = 2/(period+1), seed = SMA at index period-1, NaN warm-up.
+/// (Distinct from `ema` which first-value-seeds, and `ema_wilder` which uses 1/period.)
+pub fn ema_sma(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut r = nan_vec(n);
+    if period == 0 || n < period {
+        return r;
+    }
+    let alpha = 2.0 / (period as f64 + 1.0);
+    let mut s = 0.0;
+    for &x in data.iter().take(period) {
+        s += x;
+    }
+    r[period - 1] = s / period as f64;
+    for i in period..n {
+        r[i] = alpha * data[i] + (1.0 - alpha) * r[i - 1];
+    }
+    r
+}
+
 /// Wilder EMA (alpha = 1/period), SMA-seeded from the first valid index. NaN warm-up.
 /// NaN inputs after the seed carry the previous value forward.
 pub fn ema_wilder(data: &[f64], period: usize) -> Vec<f64> {
