@@ -154,8 +154,16 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         10/10 PASS; asserts numba never imported.
   NOTE: setup.py/setup.cfg kept but superseded by pyproject (pip uses the maturin
   backend). Can be deleted in a final tidy. Wheels build under rust/target (gitignored).
-- **Phase 5 — Benchmark report** (rust vs numba vs talib) + final verification, then
-  STOP and ask user before any push.
+- **Phase 5 — Benchmark report + final verification** [DONE]
+  - [x] benchmark/speed_bench.py -> benchmark/SPEED.md: common indicators ~50x-240x
+        vs interpreted-python; on par with TA-Lib for pure kernels.
+  - [x] Final verification: all 9 parity suites + ci_smoke + cargo (33) green.
+  - [x] MIGRATION_SUMMARY.md written; RUST_MIGRATION_TRACKER.csv all migrated.
+
+*** PROJECT COMPLETE. Migration + tests + parity + benchmark + CI/CD all done on
+branch rust-indicators-migration. NOTHING PUSHED. Awaiting user decision on
+push / PR / tag. Real-data benchmark still pending Dhan/Historify availability
+(currently yfinance). ***
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
         Phase 3 cleanup along with all remaining _calculate_* numba staticmethods.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);
