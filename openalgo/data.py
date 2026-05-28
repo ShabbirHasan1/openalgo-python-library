@@ -20,7 +20,7 @@ class DataAPI(BaseAPI):
         """Make HTTP request with proper error handling"""
         url = self.base_url + endpoint
         try:
-            response = httpx.post(url, json=payload, headers=self.headers, timeout=self.timeout)
+            response = self.client.post(url, json=payload, headers=self.headers, timeout=self.timeout)
             return self._handle_response(response)
         except httpx.TimeoutException:
             return {
@@ -441,7 +441,7 @@ class DataAPI(BaseAPI):
 
                 url = f"{self.base_url}instruments"
                 try:
-                    response = httpx.get(url, params=params, timeout=self.timeout)
+                    response = self.client.get(url, params=params, timeout=self.timeout)
                     result = self._handle_response(response)
 
                     if result.get('status') == 'success' and 'data' in result:
@@ -475,7 +475,7 @@ class DataAPI(BaseAPI):
         url = f"{self.base_url}instruments"
         try:
             # Don't include Content-Type header for GET requests
-            response = httpx.get(url, params=params, timeout=self.timeout)
+            response = self.client.get(url, params=params, timeout=self.timeout)
 
             # Handle JSON response
             result = self._handle_response(response)

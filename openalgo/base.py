@@ -27,3 +27,28 @@ class BaseAPI:
             'Content-Type': 'application/json'
         }
         self.timeout = timeout
+        # Single connection-pooled client reused by every REST call. Without
+        # this, each request went through the module-level httpx.post/get,
+        # which opens and tears down a fresh TCP connection per call, leaving
+        # thousands of sockets in TIME_WAIT over a trading session and
+        # eventually exhausting ephemeral ports.
+        self.client = httpx.Client(
+            timeout=timeout,
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=50,
+                keepalive_expiry=120.0,
+            ),
+        )
+
+    def close(self):
+        """Close the shared HTTP client and release pooled connections."""
+        client = getattr(self, "client", None)
+        if client is not None:
+            client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()

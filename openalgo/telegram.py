@@ -17,7 +17,7 @@ class TelegramAPI(BaseAPI):
         """Make HTTP request with proper error handling"""
         url = self.base_url + endpoint
         try:
-            response = httpx.post(url, json=payload, headers=self.headers, timeout=self.timeout)
+            response = self.client.post(url, json=payload, headers=self.headers, timeout=self.timeout)
             return self._handle_response(response)
         except httpx.TimeoutException:
             return {

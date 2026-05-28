@@ -17,6 +17,25 @@ class Strategy:
         self._host_url = host_url.rstrip('/')
         self._webhook_id = webhook_id
         self._webhook_url = None
+        # Reuse one keep-alive connection for repeated webhook posts instead
+        # of opening a fresh socket per signal.
+        self._client = httpx.Client(
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=50,
+                keepalive_expiry=120.0,
+            ),
+        )
+
+    def close(self):
+        """Close the underlying HTTP client and release pooled connections."""
+        self._client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     @property
     def webhook_url(self) -> str:
@@ -53,7 +72,7 @@ class Strategy:
             post_message["position_size"] = str(position_size)
             
         try:
-            response = httpx.post(self.webhook_url, json=post_message)
+            response = self._client.post(self.webhook_url, json=post_message)
             response.raise_for_status()  # Raise exception for bad status codes
             return response.json()
         except httpx.HTTPError as e:
