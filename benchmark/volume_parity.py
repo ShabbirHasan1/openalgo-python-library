@@ -13,7 +13,9 @@ import numpy as np
 import pandas as pd
 
 from openalgo.indicators import _backend as b
-from openalgo.indicators.volume import OBV, ADL, CMF, MFI, EMV, FI
+from openalgo.indicators.volume import (OBV, ADL, CMF, MFI, EMV, FI, NVI, PVI, VROC,
+                                        VOLOSC, KlingerVolumeOscillator as KVO,
+                                        PriceVolumeTrend as PVT, RVOL)
 
 DATA = Path(__file__).resolve().parent / "data"
 FAILS = []
@@ -50,7 +52,28 @@ def main():
     raw_fi = FI._calculate_raw_fi(c, v)
     cmp("force_index", b.force_index(c, v, 13), FI._calculate_ema(raw_fi, 13))
 
+    cmp("nvi", b.nvi(c, v), NVI._calculate_nvi(c, v))
+    cmp("pvi", b.pvi(c, v, 100.0), PVI._calculate_pvi(c, v, 100.0))
+    cmp("pvt", b.pvt(c, v), PVT._calculate_pvt(c, v))
+    cmp("vroc", b.vroc(v, 25), VROC._calculate_vroc(v, 25))
+    cmp("volosc", b.volosc(v, 5, 10), _volosc_ref(v, 5, 10))
+    kk, kt = b.kvo(h, lo, c, v, 13, 34, 55)
+    rkk, rkt = KVO._calculate_kvo_tv(h, lo, c, v, 13, 34, 55)
+    cmp("kvo", kk, rkk)
+    cmp("kvo.trig", kt, rkt)
+    cmp("rvol", b.rvol(v, 20), RVOL._calculate_rvol(v, 20))
+
     print("\nRESULT:", "ALL VOLUME PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
+
+
+def _volosc_ref(v, s, l):
+    se = VOLOSC._calculate_ema_safe(v, s)
+    le = VOLOSC._calculate_ema_safe(v, l)
+    out = np.full_like(v, np.nan)
+    for i in range(len(v)):
+        if not np.isnan(le[i]) and le[i] != 0:
+            out[i] = 100.0 * (se[i] - le[i]) / le[i]
+    return out
     return 1 if FAILS else 0
 
 

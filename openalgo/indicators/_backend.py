@@ -565,6 +565,94 @@ def force_index(close, volume, length):
     return ema_first_valid(raw, int(length))
 
 
+def nvi(close, volume):
+    close, volume = _f(close), _f(volume)
+    n = close.size
+    out = np.zeros(n)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        roc_ = np.where(close[:-1] != 0, (close[1:] - close[:-1]) / close[:-1] * 100.0, 0.0)
+    add = np.where(volume[1:] < volume[:-1], roc_, 0.0)
+    out[1:] = np.cumsum(add)
+    return out
+
+
+def pvi(close, volume, initial_value):
+    close, volume = _f(close), _f(volume)
+    n = close.size
+    out = np.full(n, np.nan)
+    out[0] = initial_value
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ratio = np.where((volume[1:] > volume[:-1]) & (close[:-1] != 0),
+                         close[1:] / np.where(close[:-1] == 0, 1.0, close[:-1]), 1.0)
+    # Thread the initial value through cumprod so the left-to-right multiply order
+    # matches the reference's sequential prev*ratio exactly (bit-for-bit).
+    factors = np.empty(n)
+    factors[0] = initial_value
+    factors[1:] = ratio
+    out[:] = np.cumprod(factors)
+    return out
+
+
+def pvt(close, volume):
+    close, volume = _f(close), _f(volume)
+    n = close.size
+    out = np.zeros(n)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        term = np.where(close[:-1] != 0,
+                        (close[1:] - close[:-1]) / np.where(close[:-1] == 0, 1.0, close[:-1]) * volume[1:],
+                        0.0)
+    out[1:] = np.cumsum(term)
+    return out
+
+
+def vroc(volume, period):
+    volume = _f(volume)
+    period = int(period)
+    n = volume.size
+    out = np.full(n, np.nan)
+    if period >= n:
+        return out
+    prev = volume[:-period]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out[period:] = np.where(prev != 0, (volume[period:] - prev) / np.where(prev == 0, 1.0, prev) * 100.0, 0.0)
+    return out
+
+
+def volosc(volume, short_length, long_length):
+    volume = _f(volume)
+    se = ema_first_valid(volume, int(short_length))
+    le = ema_first_valid(volume, int(long_length))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        vo = np.where((~np.isnan(le)) & (le != 0), 100.0 * (se - le) / le, np.nan)
+    return vo
+
+
+def kvo(high, low, close, volume, trig_len, fast_x, slow_x):
+    high, low, close, volume = _f(high), _f(low), _f(close), _f(volume)
+    n = close.size
+    hlc3 = (high + low + close) / 3.0
+    xt = np.empty(n)
+    if n:
+        xt[0] = volume[0] * 100.0
+        up = hlc3[1:] > hlc3[:-1]
+        xt[1:] = np.where(up, volume[1:] * 100.0, -volume[1:] * 100.0)
+    xfast = ema(xt, int(fast_x))
+    xslow = ema(xt, int(slow_x))
+    xkvo = xfast - xslow
+    xtrig = ema(xkvo, int(trig_len))
+    return xkvo, xtrig
+
+
+def rvol(volume, period):
+    volume = _f(volume)
+    period = int(period)
+    avg = _win_mean(volume, period)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = np.where(avg > 0, volume / np.where(avg == 0, 1.0, avg), 1.0)
+    out[np.isnan(avg)] = np.nan
+    return out
+
+
 def _win_mean(data, period):
     return _roll(data, int(period), np.mean)
 

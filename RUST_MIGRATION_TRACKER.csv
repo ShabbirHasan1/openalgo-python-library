@@ -58,13 +58,13 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 56,Volume,Chaikin Money Flow,ta.cmf,CMF,volume.py,"high,low,close,volume",period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,Sum(MFV)/Sum(vol)
 57,Volume,Ease of Movement,ta.emv,EMV,volume.py,"high,low,volume","length,divisor",series,—,No,Medium,2,Migrated; parity PASS,1e-12 rel,Distance moved / box ratio
 58,Volume,Elder Force Index,ta.force_index,FI,volume.py,"close,volume",length,series,—,Yes,Low,2,Migrated; parity PASS,1e-12 rel,EMA of change*volume
-59,Volume,Negative Volume Index,ta.nvi,NVI,volume.py,"close,volume",—,series,—,Yes,Medium,2,Not Started,1e-12 rel,Cumulative on volume-down days
-60,Volume,Positive Volume Index,ta.pvi,PVI,volume.py,"close,volume",initial_value,series,—,Yes,Medium,2,Not Started,1e-12 rel,Cumulative on volume-up days
-61,Volume,Volume Oscillator,ta.volosc,VOLOSC,volume.py,volume,"short_length,long_length",series,—,Yes,Low,2,Not Started,1e-12 rel,EMA short/long volume spread
-62,Volume,Volume Rate of Change,ta.vroc,VROC,volume.py,volume,period,series,—,No,Low,2,Not Started,1e-12 rel,ROC of volume
-63,Volume,Klinger Volume Oscillator,ta.kvo,KlingerVolumeOscillator,volume.py,"high,low,close,volume","trig_len,fast_x,slow_x","kvo,trigger",—,Yes,High,2,Not Started,1e-12 rel,Volume force EMA spread
-64,Volume,Price Volume Trend,ta.pvt,PriceVolumeTrend,volume.py,"close,volume",—,series,—,Yes,Low,2,Not Started,1e-12 rel,Cumulative pct-change*volume
-65,Volume,Relative Volume,ta.rvol,RVOL,volume.py,volume,period,series,—,No,Low,2,Not Started,1e-12 rel,Volume / SMA(volume)
+59,Volume,Negative Volume Index,ta.nvi,NVI,volume.py,"close,volume",—,series,—,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,Cumulative on volume-down days
+60,Volume,Positive Volume Index,ta.pvi,PVI,volume.py,"close,volume",initial_value,series,—,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,Cumulative on volume-up days
+61,Volume,Volume Oscillator,ta.volosc,VOLOSC,volume.py,volume,"short_length,long_length",series,—,Yes,Low,2,Migrated; parity PASS,1e-12 rel,EMA short/long volume spread
+62,Volume,Volume Rate of Change,ta.vroc,VROC,volume.py,volume,period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,ROC of volume
+63,Volume,Klinger Volume Oscillator,ta.kvo,KlingerVolumeOscillator,volume.py,"high,low,close,volume","trig_len,fast_x,slow_x","kvo,trigger",—,Yes,High,2,Migrated; parity PASS,1e-12 rel,Volume force EMA spread
+64,Volume,Price Volume Trend,ta.pvt,PriceVolumeTrend,volume.py,"close,volume",—,series,—,Yes,Low,2,Migrated; parity PASS,1e-12 rel,Cumulative pct-change*volume
+65,Volume,Relative Volume,ta.rvol,RVOL,volume.py,volume,period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,Volume / SMA(volume)
 66,Oscillator,Chande Momentum Osc,ta.cmo,CMO,oscillators.py,close,period,series,CMO,No,Low,2,Not Started,1e-12 rel,Sum up/down momentum
 67,Oscillator,TRIX,ta.trix,TRIX,oscillators.py,close,length,series,TRIX,Yes,Low,2,Not Started,1e-12 rel,ROC of triple EMA of log price
 68,Oscillator,Ultimate Oscillator,ta.uo_oscillator,UO,oscillators.py,"high,low,close","period1,period2,period3",series,ULTOSC,No,Medium,2,Not Started,1e-12 rel,Duplicate of ta.ultimate_oscillator

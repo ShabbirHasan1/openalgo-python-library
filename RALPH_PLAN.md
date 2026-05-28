@@ -99,10 +99,12 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         ALL bit-exact (0.0) incl HV log. **VOLATILITY MODULE COMPLETE.**
   - [x] Volume batch 1: OBV, ADL, CMF, MFI, EMV, FI. New kernels obv/adl/cmf/mfi/
         emv_raw/ema_first_valid (cargo 32/32). All bit-exact (volume_parity.py).
-  - [ ] Volume batch 2: OBVSmoothed, VWAP (session-anchored - read carefully),
-        NVI, PVI, VOLOSC, VROC, KlingerVolumeOscillator, PriceVolumeTrend, RVOL.
+  - [x] Volume batch 2: NVI, PVI, VOLOSC, VROC, KVO, PVT, RVOL. Composed in _backend
+        (cumsum/cumprod + ema/ema_first_valid). PVI fixed via threaded cumprod
+        (prepend initial) for bit-exactness. All bit-exact (volume_parity.py).
+  - [ ] Volume remaining: OBVSmoothed (MA/BB overlay), VWAP (session-anchored).
   - [ ] oscillators / statistics / hybrid modules.
-        50 of ~90 indicators migrated. (TREND, MOMENTUM, VOLATILITY complete.)
+        57 of ~90 indicators migrated. (TREND, MOMENTUM, VOLATILITY complete.)
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);
         add numpy fallbacks in a later polish pass.
 

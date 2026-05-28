@@ -1055,7 +1055,7 @@ class NVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_nvi(close_data, volume_data)
+        result = _backend.nvi(close_data, volume_data)
         return self.format_output(result, input_type, index)
     
     def calculate_with_ema(self, close: Union[np.ndarray, pd.Series, list],
@@ -1083,12 +1083,8 @@ class NVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        # Calculate NVI
-        nvi = self._calculate_nvi(close_data, volume_data)
-        
-        # Calculate EMA of NVI
-        nvi_ema = self._calculate_ema(nvi, ema_length)
-        
+        nvi = _backend.nvi(close_data, volume_data)
+        nvi_ema = _backend.ema_first_valid(nvi, ema_length)
         results = (nvi, nvi_ema)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1199,7 +1195,7 @@ class PVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_pvi(close_data, volume_data, initial_value)
+        result = _backend.pvi(close_data, volume_data, initial_value)
         return self.format_output(result, input_type, index)
     
     def calculate_with_signal(self, close: Union[np.ndarray, pd.Series, list],
@@ -1337,19 +1333,7 @@ class VOLOSC(BaseIndicator):
             if total_volume == 0:
                 raise RuntimeError("No volume is provided by the data vendor.")
         
-        # Calculate EMA moving averages (TradingView uses EMA, not SMA)
-        short_ema = self._calculate_ema_safe(validated_volume, short_length)
-        long_ema = self._calculate_ema_safe(validated_volume, long_length)
-        
-        # Calculate Volume Oscillator using TradingView formula
-        vo = np.full_like(validated_volume, np.nan, dtype=np.float64)
-        for i in range(len(validated_volume)):
-            if not np.isnan(long_ema[i]) and long_ema[i] != 0:
-                # TradingView formula: osc = 100 * (short - long) / long
-                vo[i] = 100.0 * (short_ema[i] - long_ema[i]) / long_ema[i]
-            else:
-                vo[i] = np.nan
-        
+        vo = _backend.volosc(validated_volume, short_length, long_length)
         return self.format_output(vo, input_type, index)
 
 
@@ -1399,7 +1383,7 @@ class VROC(BaseIndicator):
         validated_volume, input_type, index = self.validate_input(volume)
         self.validate_period(period, len(validated_volume))
         
-        result = self._calculate_vroc(validated_volume, period)
+        result = _backend.vroc(validated_volume, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1527,8 +1511,8 @@ class KlingerVolumeOscillator(BaseIndicator):
             if param <= 0:
                 raise ValueError(f"{name} must be positive, got {param}")
         
-        kvo, trigger = self._calculate_kvo_tv(high_data, low_data, close_data, volume_data, trig_len, fast_x, slow_x)
-        
+        kvo, trigger = _backend.kvo(high_data, low_data, close_data, volume_data, trig_len, fast_x, slow_x)
+
         results = (kvo, trigger)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1595,7 +1579,7 @@ class PriceVolumeTrend(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_pvt(close_data, volume_data)
+        result = _backend.pvt(close_data, volume_data)
         return self.format_output(result, input_type, index)
 
 
@@ -1652,5 +1636,5 @@ class RVOL(BaseIndicator):
         volume_data, input_type, index = self.validate_input(volume)
         self.validate_period(period, len(volume_data))
         
-        result = self._calculate_rvol(volume_data, period)
+        result = _backend.rvol(volume_data, period)
         return self.format_output(result, input_type, index)
