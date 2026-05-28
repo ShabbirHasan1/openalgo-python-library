@@ -93,9 +93,12 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         New kernel ema_sma (SMA-seeded 2/(p+1) EMA, used by Keltner+Chaikin); rest
         composed (donchian=hi/lo, natr=atr/close, ultosc=rolling_sum). All bit-exact
         except ULTOSC 3.2e-13 (rolling_sum vs np.sum). benchmark/volatility_parity.py.
-  - [ ] Volatility batch 2: MASS, BBPercent, BBWidth, ChandelierExit, HistoricalVol,
-        UlcerIndex, STARC, TRANGE. Then volume / oscillators / statistics / hybrid.
-        36 of ~90 indicators migrated.
+  - [x] Volatility batch 2: TRANGE, MASS, BBPercent, BBWidth, ChandelierExit,
+        HistoricalVolatility, UlcerIndex, STARC. Per-window mean/std helpers
+        (_win_mean/_win_std) in _backend for bit-exactness; mass/ulcer compose rust.
+        ALL bit-exact (0.0) incl HV log. **VOLATILITY MODULE COMPLETE.**
+  - [ ] volume / oscillators / statistics / hybrid modules.
+        44 of ~90 indicators migrated. (TREND, MOMENTUM, VOLATILITY complete.)
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);
         add numpy fallbacks in a later polish pass.
 

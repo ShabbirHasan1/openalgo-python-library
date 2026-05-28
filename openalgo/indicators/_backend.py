@@ -482,6 +482,97 @@ def ma_envelopes(data, period, percentage, ma_type):
     return ma * (1 + mult), ma, ma * (1 - mult)
 
 
+def _win_mean(data, period):
+    return _roll(data, int(period), np.mean)
+
+
+def _win_std(data, period):
+    """Per-window population std; NaN if the window contains any NaN (TV ta.stdev)."""
+    def f(w):
+        if np.isnan(w).any():
+            return np.nan
+        m = w.mean()
+        return np.sqrt(np.mean((w - m) ** 2))
+    return _roll(data, int(period), f)
+
+
+def mass(high, low, length):
+    high, low = _f(high), _f(low)
+    span = high - low
+    e1 = ema(span, 9)
+    e2 = ema(e1, 9)
+    cond = (e2 != 0) & ~np.isnan(e1) & ~np.isnan(e2)
+    ratio = np.where(cond, e1 / np.where(e2 == 0, 1.0, e2), np.nan)
+    return rolling_sum(ratio, int(length))
+
+
+def _bb_bands(data, period, std_dev):
+    m = _win_mean(data, period)
+    sd = _win_std(data, period)
+    return m + sd * std_dev, m, m - sd * std_dev
+
+
+def bbpercent(data, period, std_dev):
+    data = _f(data)
+    up, m, lo = _bb_bands(data, int(period), std_dev)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = (data - lo) / (up - lo)
+    out[(~np.isnan(up)) & (up == lo)] = 0.5
+    return out
+
+
+def bbwidth(data, period, std_dev):
+    data = _f(data)
+    up, m, lo = _bb_bands(data, int(period), std_dev)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = (up - lo) / m
+    out[(~np.isnan(m)) & (m == 0)] = 0.0
+    return out
+
+
+def chandelier_exit(high, low, close, period, multiplier):
+    high, low, close = _f(high), _f(low), _f(close)
+    atr = _win_mean(true_range(high, low, close), int(period))
+    hh = highest(high, int(period))
+    ll = lowest(low, int(period))
+    return hh - atr * multiplier, ll + atr * multiplier
+
+
+def hv(close, length, annual, per):
+    close = _f(close)
+    n = close.size
+    lr = np.full(n, np.nan)
+    if n > 1:
+        valid = (close[:-1] > 0) & (close[1:] > 0)
+        idx = np.arange(1, n)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            ratios = close[1:] / close[:-1]
+        lr[idx[valid]] = np.log(ratios[valid])
+    sd = _win_std(lr, int(length))
+    return 100.0 * sd * np.sqrt(annual / per)
+
+
+def ulcerindex(data, length, smooth_length, signal_length, signal_type, return_signal):
+    data = _f(data)
+    hh = highest(data, int(length))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        dd = np.where((~np.isnan(hh)) & (hh != 0),
+                      100.0 * (data - hh) / np.where(hh == 0, 1.0, hh), np.nan)
+    ulcer = np.sqrt(sma(dd ** 2, int(smooth_length)))
+    if return_signal:
+        sig = sma(ulcer, int(signal_length)) if signal_type.upper() == "SMA" \
+            else ema(ulcer, int(signal_length))
+        return ulcer, sig
+    return ulcer
+
+
+def starc(high, low, close, ma_period, atr_period, multiplier):
+    high, low, close = _f(high), _f(low), _f(close)
+    m = _win_mean(close, int(ma_period))
+    atr = _win_mean(true_range(high, low, close), int(atr_period))
+    return m + atr * multiplier, m, m - atr * multiplier
+
+
 def _roll(data, period, fn):
     """Rolling reduction for numpy fallbacks (NaN warm-up)."""
     n = data.size

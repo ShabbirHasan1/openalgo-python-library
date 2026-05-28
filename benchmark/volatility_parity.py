@@ -14,7 +14,9 @@ import pandas as pd
 
 from openalgo.indicators import _backend as b
 from openalgo.indicators import utils as u
-from openalgo.indicators.volatility import Keltner, Donchian, Chaikin, ULTOSC, RVI as VolRVI
+from openalgo.indicators.volatility import (Keltner, Donchian, Chaikin, ULTOSC, RVI as VolRVI,
+                                            MASS, BBPercent, BBWidth, ChandelierExit,
+                                            HistoricalVolatility, UlcerIndex, STARC, TRANGE)
 
 DATA = Path(__file__).resolve().parent / "data"
 FAILS = []
@@ -71,7 +73,55 @@ def main():
     cmp("ultosc", b.ultosc(h, lo, c, 7, 14, 28),
         ULTOSC._calculate_ultosc(h, lo, c, 7, 14, 28), tol=1e-9)
 
+    cmp("trange", b.true_range(h, lo, c), TRANGE._calculate_trange(h, lo, c))
+    cmp("mass", b.mass(h, lo, 10), _mass_ref(h, lo, 10))
+    cmp("bbpercent", b.bbpercent(c, 20, 2.0), _bbp_ref(c, 20, 2.0))
+    cmp("bbwidth", b.bbwidth(c, 20, 2.0), _bbw_ref(c, 20, 2.0))
+    cel, ces = b.chandelier_exit(h, lo, c, 22, 3.0)
+    rcel, rces = ChandelierExit._calculate_chandelier(h, lo, c, 22, 3.0)
+    cmp("chandelier.long", cel, rcel)
+    cmp("chandelier.short", ces, rces)
+    cmp("hv", b.hv(c, 10, 365, 1), HistoricalVolatility._calculate_hv_tv(c, 10, 365, 1), tol=1e-9)
+    cmp("ulcerindex", b.ulcerindex(c, 14, 14, 52, "SMA", False), _ulcer_ref(c, 14, 14))
+    su, sm, sl = b.starc(h, lo, c, 5, 15, 1.33)
+    cmp("starc.mid", sm, STARC._calculate_sma(c, 5))
+    cmp("starc.up", su, STARC._calculate_sma(c, 5) + STARC._calculate_atr(h, lo, c, 15) * 1.33)
+
     print("\nRESULT:", "ALL VOLATILITY PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
+
+
+def _mass_ref(h, lo, length):
+    span = h - lo
+    e1 = u.ema(span, 9)
+    e2 = u.ema(e1, 9)
+    ratio = np.where((e2 != 0) & ~np.isnan(e1) & ~np.isnan(e2), e1 / e2, np.nan)
+    return u.rolling_sum(ratio, length)
+
+
+def _bbp_ref(c, p, sd):
+    m = BBPercent._calculate_sma(c, p)
+    s = BBPercent._calculate_stddev(c, p)
+    up, lo_ = m + s * sd, m - s * sd
+    out = np.full_like(c, np.nan)
+    for i in range(len(c)):
+        out[i] = (c[i] - lo_[i]) / (up[i] - lo_[i]) if up[i] != lo_[i] else 0.5
+    return out
+
+
+def _bbw_ref(c, p, sd):
+    m = BBWidth._calculate_sma(c, p)
+    s = BBWidth._calculate_stddev(c, p)
+    up, lo_ = m + s * sd, m - s * sd
+    out = np.full_like(c, np.nan)
+    for i in range(len(c)):
+        out[i] = (up[i] - lo_[i]) / m[i] if m[i] != 0 else 0.0
+    return out
+
+
+def _ulcer_ref(c, length, smooth):
+    hh = u.highest(c, length)
+    dd = np.where((~np.isnan(hh)) & (hh != 0), 100 * (c - hh) / hh, np.nan)
+    return np.sqrt(u.sma(dd ** 2, smooth))
     return 1 if FAILS else 0
 
 

@@ -703,7 +703,7 @@ class TRANGE(BaseIndicator):
         
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         
-        result = self._calculate_trange(high_data, low_data, close_data)
+        result = _backend.true_range(high_data, low_data, close_data)
         return self.format_output(result, input_type, index)
 
 
@@ -766,22 +766,7 @@ class MASS(BaseIndicator):
         
         high_data, low_data = self.align_arrays(high_data, low_data)
         
-        # Calculate high-low range (span)
-        span = high_data - low_data
-        
-        # Calculate first EMA of span with period 9 using optimized utility
-        ema1 = ema(span, 9)
-        
-        # Calculate second EMA of first EMA with period 9 using optimized utility
-        ema2 = ema(ema1, 9)
-        
-        # Calculate ratio (ema1 / ema2)
-        ratio = np.where((ema2 != 0) & (~np.isnan(ema1)) & (~np.isnan(ema2)), 
-                        ema1 / ema2, np.nan)
-        
-        # Calculate sum of ratio over length periods using O(N) rolling sum
-        result = rolling_sum(ratio, length)
-        
+        result = _backend.mass(high_data, low_data, length)
         return self.format_output(result, input_type, index)
 
 
@@ -847,21 +832,7 @@ class BBPercent(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Calculate Bollinger Bands
-        sma = self._calculate_sma(validated_data, period)
-        stddev = self._calculate_stddev(validated_data, period)
-        
-        upper_band = sma + (stddev * std_dev)
-        lower_band = sma - (stddev * std_dev)
-        
-        # Calculate %B
-        percent_b = np.full_like(validated_data, np.nan)
-        for i in range(len(validated_data)):
-            if upper_band[i] != lower_band[i]:
-                percent_b[i] = (validated_data[i] - lower_band[i]) / (upper_band[i] - lower_band[i])
-            else:
-                percent_b[i] = 0.5
-        
+        percent_b = _backend.bbpercent(validated_data, period, std_dev)
         return self.format_output(percent_b, input_type, index)
 
 
@@ -927,21 +898,7 @@ class BBWidth(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Calculate Bollinger Bands
-        sma = self._calculate_sma(validated_data, period)
-        stddev = self._calculate_stddev(validated_data, period)
-        
-        upper_band = sma + (stddev * std_dev)
-        lower_band = sma - (stddev * std_dev)
-        
-        # Calculate Bandwidth
-        bandwidth = np.full_like(validated_data, np.nan)
-        for i in range(len(validated_data)):
-            if sma[i] != 0:
-                bandwidth[i] = (upper_band[i] - lower_band[i]) / sma[i]
-            else:
-                bandwidth[i] = 0.0
-        
+        bandwidth = _backend.bbwidth(validated_data, period, std_dev)
         return self.format_output(bandwidth, input_type, index)
 
 
@@ -1048,8 +1005,8 @@ class ChandelierExit(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
         
-        long_exit, short_exit = self._calculate_chandelier(high_data, low_data, close_data, period, multiplier)
-        
+        long_exit, short_exit = _backend.chandelier_exit(high_data, low_data, close_data, period, multiplier)
+
         results = (long_exit, short_exit)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1154,7 +1111,7 @@ class HistoricalVolatility(BaseIndicator):
         if per <= 0:
             raise ValueError(f"Per periods must be positive, got {per}")
         
-        result = self._calculate_hv_tv(close_data, length, annual, per)
+        result = _backend.hv(close_data, length, annual, per)
         return self.format_output(result, input_type, index)
 
 
@@ -1222,42 +1179,14 @@ class UlcerIndex(BaseIndicator):
         self.validate_period(smooth_length, len(validated_data))
         self.validate_period(signal_length, len(validated_data))
         
-        # Step 1: Calculate highest over the length period using O(N) utility
-        # highest = highest(src, length)
-        highest_values = highest(validated_data, length)
-        
-        # Step 2: Calculate percentage drawdown - vectorized
-        # drawdown = 100 * (src - highest) / highest
-        drawdown = np.where((~np.isnan(highest_values)) & (highest_values != 0),
-                           100 * (validated_data - highest_values) / highest_values, 
-                           np.nan)
-        
-        # Step 3: Calculate squared drawdowns - vectorized
-        # pow(drawdown, 2)
-        squared_drawdown = np.power(drawdown, 2)
-        
-        # Step 4: Calculate SMA of squared drawdowns using O(N) utility
-        # sma(pow(drawdown, 2), smoothLength)
-        sma_squared_dd = sma(squared_drawdown, smooth_length)
-        
-        # Step 5: Calculate Ulcer Index - vectorized
-        # ulcer = sqrt(sma(pow(drawdown, 2), smoothLength))
-        ulcer = np.sqrt(sma_squared_dd)
-        
         if return_signal:
-            # Step 6: Calculate signal line using optimized utilities
-            # signal = signalType == "SMA" ? sma(ulcer, signalLength) : ema(ulcer, signalLength)
-            if signal_type.upper() == "SMA":
-                signal = sma(ulcer, signal_length)
-            else:  # EMA
-                signal = ema(ulcer, signal_length)
-            
-            # Format outputs
-            ulcer_formatted = self.format_output(ulcer, input_type, index)
-            signal_formatted = self.format_output(signal, input_type, index)
-            return ulcer_formatted, signal_formatted
-        else:
-            return self.format_output(ulcer, input_type, index)
+            ulcer, signal = _backend.ulcerindex(validated_data, length, smooth_length,
+                                                signal_length, signal_type, True)
+            return (self.format_output(ulcer, input_type, index),
+                    self.format_output(signal, input_type, index))
+        ulcer = _backend.ulcerindex(validated_data, length, smooth_length,
+                                    signal_length, signal_type, False)
+        return self.format_output(ulcer, input_type, index)
 
 
 class STARC(BaseIndicator):
@@ -1362,13 +1291,5 @@ class STARC(BaseIndicator):
         
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         
-        # Calculate SMA and ATR
-        sma = self._calculate_sma(close_data, ma_period)
-        atr = self._calculate_atr(high_data, low_data, close_data, atr_period)
-        
-        # Calculate bands
-        upper_band = sma + (atr * multiplier)
-        lower_band = sma - (atr * multiplier)
-        
-        results = (upper_band, sma, lower_band)
+        results = _backend.starc(high_data, low_data, close_data, ma_period, atr_period, multiplier)
         return self.format_multiple_outputs(results, input_type, index)
