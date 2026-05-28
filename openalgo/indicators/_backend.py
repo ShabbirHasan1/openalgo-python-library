@@ -615,6 +615,161 @@ def session_vwap(source, volume, starts):
     return vwap, sd
 
 
+def adx(high, low, close, period):
+    high, low, close = _f(high), _f(low), _f(close)
+    period = int(period)
+    n = close.size
+    tr = true_range(high, low, close)
+    dmp = np.zeros(n)
+    dmm = np.zeros(n)
+    if n > 1:
+        up = high[1:] - high[:-1]
+        dn = low[:-1] - low[1:]
+        dmp[1:] = np.where((up > dn) & (up > 0), up, 0.0)
+        dmm[1:] = np.where((dn > up) & (dn > 0), dn, 0.0)
+    sm_atr = ema_wilder(tr, period)
+    sm_dmp = ema_wilder(dmp, period)
+    sm_dmm = ema_wilder(dmm, period)
+    di_plus = np.full(n, np.nan)
+    di_minus = np.full(n, np.nan)
+    dx = np.full(n, np.nan)
+    for i in range(period - 1, n):
+        if not np.isnan(sm_atr[i]) and sm_atr[i] > 0:
+            di_plus[i] = (sm_dmp[i] / sm_atr[i]) * 100
+            di_minus[i] = (sm_dmm[i] / sm_atr[i]) * 100
+            dsum = di_plus[i] + di_minus[i]
+            if dsum > 0:
+                dx[i] = abs(di_plus[i] - di_minus[i]) / dsum * 100
+    adx_ = ema_wilder(dx, period)
+    return di_plus, di_minus, adx_
+
+
+def aroon(high, low, period):
+    high, low = _f(high), _f(low)
+    period = int(period)
+    n = high.size
+    up = np.full(n, np.nan)
+    down = np.full(n, np.nan)
+    lookback = period + 1
+    for i in range(lookback - 1, n):
+        ws = i - lookback + 1
+        hp = lp = 0
+        for j in range(lookback):
+            if high[ws + j] > high[ws + hp]:
+                hp = j
+            if low[ws + j] < low[ws + lp]:
+                lp = j
+        up[i] = 100.0 * (period - (lookback - 1 - hp)) / period
+        down[i] = 100.0 * (period - (lookback - 1 - lp)) / period
+    return up, down
+
+
+def pivot_points(high, low, close):
+    high, low, close = _f(high), _f(low), _f(close)
+    pivot = (high + low + close) / 3
+    r1 = 2 * pivot - low
+    s1 = 2 * pivot - high
+    r2 = pivot + (high - low)
+    s2 = pivot - (high - low)
+    r3 = high + 2 * (pivot - low)
+    s3 = low - 2 * (high - pivot)
+    return pivot, r1, s1, r2, s2, r3, s3
+
+
+def sar(high, low, acceleration, maximum):
+    high, low = _f(high), _f(low)
+    if HAVE_RUST:
+        return _rs.sar(high, low, float(acceleration), float(maximum))
+    raise RuntimeError("sar requires the _oaindicators extension")
+
+
+def rwi(high, low, close, period):
+    high, low, close = _f(high), _f(low), _f(close)
+    period = int(period)
+    n = close.size
+    atr = _win_mean(true_range(high, low, close), period)
+    rh = np.full(n, np.nan)
+    rl = np.full(n, np.nan)
+    sq = np.sqrt(period)
+    for i in range(period, n):
+        if atr[i] > 0:
+            rh[i] = (high[i] - low[i - period]) / (atr[i] * sq)
+            rl[i] = (high[i - period] - low[i]) / (atr[i] * sq)
+    return rh, rl
+
+
+def zigzag(high, low, close, deviation):
+    high, low, close = _f(high), _f(low), _f(close)
+    n = close.size
+    out = np.full(n, np.nan)
+    if n < 3:
+        return out
+    last_type = 0
+    out[0] = close[0]
+    ch, cl = high[0], low[0]
+    chi, cli = 0, 0
+    for i in range(1, n):
+        if high[i] > ch:
+            ch, chi = high[i], i
+        if low[i] < cl:
+            cl, cli = low[i], i
+        if last_type != -1:
+            if (ch - low[i]) / ch * 100 >= deviation:
+                out[chi] = ch
+                last_type = 1
+                cl, cli = low[i], i
+        if last_type != 1:
+            if cl > 0 and (high[i] - cl) / cl * 100 >= deviation:
+                out[cli] = cl
+                last_type = -1
+                ch, chi = high[i], i
+    return out
+
+
+def williams_fractals(high, low, periods):
+    high, low = _f(high), _f(low)
+    n = int(periods)
+    length = high.size
+    fu = np.zeros(length, dtype=bool)
+    fd = np.zeros(length, dtype=bool)
+    for center in range(n, length - n):
+        df = True
+        for i in range(1, n + 1):
+            if high[center - i] >= high[center]:
+                df = False
+                break
+        if df:
+            f = [True] * 5
+            for i in range(1, n + 1):
+                if center + i < length and high[center + i] >= high[center]:
+                    f[0] = False
+                for p in range(1, 5):
+                    for q in range(1, p + 1):
+                        if center + q < length and high[center + q] > high[center]:
+                            f[p] = False
+                    if center + i + p < length and high[center + i + p] >= high[center]:
+                        f[p] = False
+            fu[center] = any(f)
+        df = True
+        for i in range(1, n + 1):
+            if low[center - i] <= low[center]:
+                df = False
+                break
+        if df:
+            f = [True] * 5
+            for i in range(1, n + 1):
+                if center + i < length and low[center + i] <= low[center]:
+                    f[0] = False
+                for p in range(1, 5):
+                    for q in range(1, p + 1):
+                        if center + q < length and low[center + q] < low[center]:
+                            f[p] = False
+                    if center + i + p < length and low[center + i + p] <= low[center]:
+                        f[p] = False
+            fd[center] = any(f)
+    return fu, fd
+
+
 def _linreg_end(y, period):
     x = np.arange(period)
     sx = np.sum(x)

@@ -1105,6 +1105,61 @@ pub fn session_vwap(source: &[f64], volume: &[f64], starts: &[f64]) -> (Vec<f64>
     (vwap, sd)
 }
 
+/// Parabolic SAR. Returns (sar, trend) where trend is +1 up / -1 down.
+pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> (Vec<f64>, Vec<f64>) {
+    let n = high.len();
+    let mut sar = vec![0.0f64; n];
+    let mut trend = vec![0.0f64; n];
+    if n == 0 {
+        return (sar, trend);
+    }
+    sar[0] = low[0];
+    trend[0] = 1.0;
+    let mut af = acceleration;
+    let mut ep = high[0];
+    for i in 1..n {
+        let prev_sar = sar[i - 1];
+        let prev_trend = trend[i - 1];
+        sar[i] = prev_sar + af * (ep - prev_sar);
+        if prev_trend == 1.0 {
+            if low[i] <= sar[i] {
+                trend[i] = -1.0;
+                sar[i] = ep;
+                ep = low[i];
+                af = acceleration;
+            } else {
+                trend[i] = 1.0;
+                if high[i] > ep {
+                    ep = high[i];
+                    af = (af + acceleration).min(maximum);
+                }
+                if i >= 2 {
+                    sar[i] = sar[i].min(low[i - 1]).min(low[i - 2]);
+                } else {
+                    sar[i] = sar[i].min(low[i - 1]);
+                }
+            }
+        } else if high[i] >= sar[i] {
+            trend[i] = 1.0;
+            sar[i] = ep;
+            ep = high[i];
+            af = acceleration;
+        } else {
+            trend[i] = -1.0;
+            if low[i] < ep {
+                ep = low[i];
+                af = (af + acceleration).min(maximum);
+            }
+            if i >= 2 {
+                sar[i] = sar[i].max(high[i - 1]).max(high[i - 2]);
+            } else {
+                sar[i] = sar[i].max(high[i - 1]);
+            }
+        }
+    }
+    (sar, trend)
+}
+
 /// On Balance Volume. obv[0]=0; sign=+1 if close>=prev else -1; cumulative.
 pub fn obv(close: &[f64], volume: &[f64]) -> Vec<f64> {
     let n = close.len();
@@ -1477,6 +1532,16 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn sar_shapes() {
+        let h = [10.0, 11.0, 12.0, 11.5, 13.0, 14.0];
+        let l = [9.0, 10.0, 11.0, 10.5, 12.0, 13.0];
+        let (s, t) = sar(&h, &l, 0.02, 0.2);
+        assert_eq!(s.len(), 6);
+        approx(s[0], 9.0);
+        assert!(t[0] == 1.0);
     }
 
     #[test]

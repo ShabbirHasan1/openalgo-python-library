@@ -118,8 +118,29 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   - [x] Statistics module: LINREG, LRSLOPE, CORREL, BETA, VAR, TSF, MEDIAN,
         MedianBands, MODE. Per-window numpy in _backend (bit-exact, numba-free).
         All bit-exact (statistics_parity.py). **STATISTICS MODULE COMPLETE (9/9).**
-  - [ ] hybrid module: ADX, Aroon, PivotPoints, SAR, DMI, WilliamsFractals, RWI, ZigZag.
-        87 of ~90 indicators migrated. (Only hybrid module left, then Phase 3+4.)
+  - [x] Hybrid module: ADX, Aroon, PivotPoints, SAR (rust kernel), DMI, ZigZag,
+        WilliamsFractals, RWI. All bit-exact (hybrid_parity.py). **HYBRID COMPLETE.**
+
+  *** ALL INDICATOR MODULES MIGRATED. Every public ta.* routes through the Rust
+  backend (numpy fallback for per-window kernels). 7 parity suites + wrapper gate
+  all green; `import openalgo` works without numba. ***
+
+- **Phase 3 — Cleanup / dependency removal** [NEXT]
+  - [ ] Delete openalgo/numba_shim.py; remove all `@jit`/`@njit` decorators and the
+        legacy `_calculate_*` numba staticmethods + numba imports across indicators/*.
+  - [ ] Replace utils.py numba kernels' usage: indicators now use _backend; keep
+        utils functions as thin numpy/_backend shims OR repoint to _backend (callers:
+        check momentum/volatility/trend still import a few from utils).
+  - [ ] Remove `_warmup()` numba precompile (or make it a no-op).
+  - [ ] setup.py: drop `extras_require={"indicators": [numba]}` and any numba mention;
+        keep numpy/pandas/httpx/websocket-client. Remove `pip install openalgo[indicators]`
+        from docs.
+  - [ ] Re-run ALL gates after cleanup; confirm no `numba`/`llvmlite` import anywhere.
+- **Phase 4 — Packaging + CI/CD** : maturin pyproject (mixed python+rust,
+  module-name openalgo._oaindicators), GitHub Actions mirroring opengreeks (cargo test
+  -> parity -> abi3 wheels linux/macos/windows + sdist -> PyPI on v* via OIDC).
+- **Phase 5 — Benchmark report** (rust vs numba vs talib) + final verification, then
+  STOP and ask user before any push.
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
         Phase 3 cleanup along with all remaining _calculate_* numba staticmethods.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);

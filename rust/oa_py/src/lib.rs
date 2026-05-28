@@ -63,6 +63,19 @@ wrap_period!(percent_rank, oa_core::percent_rank);
 wrap_period!(ema_first_valid, oa_core::ema_first_valid);
 
 #[pyfunction]
+#[pyo3(signature = (high, low, acceleration, maximum))]
+fn sar<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    acceleration: f64,
+    maximum: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let (s, t) = oa_core::sar(high.as_slice()?, low.as_slice()?, acceleration, maximum);
+    Ok((s.into_pyarray_bound(py).unbind(), t.into_pyarray_bound(py).unbind()))
+}
+
+#[pyfunction]
 #[pyo3(signature = (source, volume, starts))]
 fn session_vwap<'py>(
     py: Python<'py>,
@@ -446,6 +459,7 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(stochastic, m)?)?;
     m.add_function(wrap_pyfunction!(bop, m)?)?;
     m.add_function(wrap_pyfunction!(ema_first_valid, m)?)?;
+    m.add_function(wrap_pyfunction!(sar, m)?)?;
     m.add_function(wrap_pyfunction!(session_vwap, m)?)?;
     m.add_function(wrap_pyfunction!(obv, m)?)?;
     m.add_function(wrap_pyfunction!(adl, m)?)?;

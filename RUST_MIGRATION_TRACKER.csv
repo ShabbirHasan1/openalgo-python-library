@@ -92,14 +92,14 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 90,Statistics,Time Series Forecast,ta.tsf,TSF,statistics.py,close,period,series,TSF,No,Medium,2,Migrated; parity PASS,1e-12 rel,Linreg endpoint+slope projection
 91,Statistics,Median Bands,ta.median_bands,MedianBands,statistics.py,"high,low,close","median_length,atr_length,atr_mult","mid,upper,lower,ema",—,Yes,Medium,3,Migrated; parity PASS,1e-12 rel,Rolling median +/- ATR
 92,Statistics,Mode,ta.mode,MODE,statistics.py,close,"period,bins",series,—,No,High,3,Migrated; parity PASS,1e-9 rel,Histogram-binned rolling mode
-93,Hybrid,Average Directional Index,ta.adx,ADX,hybrid.py,"high,low,close",period,"plus_di,minus_di,adx",ADX,Yes,Medium,2,Not Started,1e-12 rel,Wilder DI/DX smoothing
-94,Hybrid,Aroon,ta.aroon,Aroon,hybrid.py,"high,low",period,"up,down",AROON,No,Low,2,Not Started,bit-exact,Periods since hi/lo
-95,Hybrid,Directional Movement Index,ta.dmi,DMI,hybrid.py,"high,low,close",period,"plus_di,minus_di",DX,Yes,Medium,2,Not Started,1e-12 rel,+DI/-DI (ADX subset)
-96,Hybrid,Pivot Points,ta.pivot_points,PivotPoints,hybrid.py,"high,low,close",—,"pivot,r1,s1,r2,s2,r3,s3",—,No,Low,3,Not Started,bit-exact,Classic floor pivots
-97,Hybrid,Parabolic SAR,ta.psar,SAR,hybrid.py,"high,low","acceleration,maximum",series,SAR,Yes,High,3,Not Started,bit-exact,Stateful AF/EP trend reversal
-98,Hybrid,Williams Fractals,ta.fractals,WilliamsFractals,hybrid.py,"high,low",periods,"up,down",—,No,Medium,3,Not Started,bit-exact,Lookahead local extrema
-99,Hybrid,Random Walk Index,ta.rwi,RWI,hybrid.py,"high,low,close",period,"rwi_high,rwi_low",—,No,Medium,3,Not Started,1e-12 rel,Range vs ATR*sqrt(n)
-100,Hybrid,ZigZag,(internal),ZigZag,hybrid.py,"high,low",deviation,series,—,Yes,High,3,Not Started,bit-exact,Not in public ta.* API; pivot-based
+93,Hybrid,Average Directional Index,ta.adx,ADX,hybrid.py,"high,low,close",period,"plus_di,minus_di,adx",ADX,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,Wilder DI/DX smoothing
+94,Hybrid,Aroon,ta.aroon,Aroon,hybrid.py,"high,low",period,"up,down",AROON,No,Low,2,Migrated; parity PASS,bit-exact,Periods since hi/lo
+95,Hybrid,Directional Movement Index,ta.dmi,DMI,hybrid.py,"high,low,close",period,"plus_di,minus_di",DX,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,+DI/-DI (ADX subset)
+96,Hybrid,Pivot Points,ta.pivot_points,PivotPoints,hybrid.py,"high,low,close",—,"pivot,r1,s1,r2,s2,r3,s3",—,No,Low,3,Migrated; parity PASS,bit-exact,Classic floor pivots
+97,Hybrid,Parabolic SAR,ta.psar,SAR,hybrid.py,"high,low","acceleration,maximum",series,SAR,Yes,High,3,Migrated; parity PASS,bit-exact,Stateful AF/EP trend reversal
+98,Hybrid,Williams Fractals,ta.fractals,WilliamsFractals,hybrid.py,"high,low",periods,"up,down",—,No,Medium,3,Migrated; parity PASS,bit-exact,Lookahead local extrema
+99,Hybrid,Random Walk Index,ta.rwi,RWI,hybrid.py,"high,low,close",period,"rwi_high,rwi_low",—,No,Medium,3,Migrated; parity PASS,1e-12 rel,Range vs ATR*sqrt(n)
+100,Hybrid,ZigZag,(internal),ZigZag,hybrid.py,"high,low",deviation,series,—,Yes,High,3,Migrated; parity PASS,bit-exact,Not in public ta.* API; pivot-based
 101,Utility,Crossover,ta.crossover,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Boolean cross-up detect
 102,Utility,Crossunder,ta.crossunder,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Boolean cross-down detect
 103,Utility,Cross,(util),cross,utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Either-direction cross
