@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import sma, ema, highest, lowest, rolling_sum, true_range, cmo_optimized
+from . import _backend
 
 
 @jit(nopython=True)
@@ -71,7 +72,7 @@ class ROC(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_roc(validated_data, period)
+        result = _backend.roc_osc(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -134,7 +135,7 @@ class CMO(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period + 1, len(validated_data))  # +1 for diff
-        result = self._calculate_cmo(validated_data, period)
+        result = _backend.cmo(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -180,25 +181,7 @@ class TRIX(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(length, len(validated_data))
         
-        # Step 1: Calculate natural logarithm of price (math.log(close))
-        log_data = np.log(validated_data)
-        
-        # Step 2: Calculate triple EMA of log data using optimized utility
-        # First EMA: ta.ema(math.log(close), length)
-        ema1 = ema(log_data, length)
-        # Second EMA: ta.ema(ta.ema(math.log(close), length), length)
-        ema2 = ema(ema1, length)
-        # Third EMA: ta.ema(ta.ema(ta.ema(math.log(close), length), length), length)
-        ema3 = ema(ema2, length)
-        
-        # Step 3: Calculate change (ta.change) - simple difference
-        trix = np.full_like(ema3, np.nan)
-        for i in range(1, len(ema3)):
-            trix[i] = ema3[i] - ema3[i - 1]  # ta.change() is just the difference
-        
-        # Step 4: Multiply by 10000 (TradingView formula)
-        trix = trix * 10000
-        
+        trix = _backend.trix(validated_data, length)
         return self.format_output(trix, input_type, index)
 
 
@@ -350,15 +333,7 @@ class AO(BaseIndicator):
         
         high_data, low_data = self.align_arrays(high_data, low_data)
         
-        # Calculate median price
-        median_price = (high_data + low_data) / 2
-        
-        # Calculate SMAs
-        fast_sma = self._calculate_sma(median_price, fast_period)
-        slow_sma = self._calculate_sma(median_price, slow_period)
-        
-        # Calculate AO
-        result = fast_sma - slow_sma
+        result = _backend.ao(high_data, low_data, fast_period, slow_period)
         return self.format_output(result, input_type, index)
 
 
@@ -411,20 +386,7 @@ class AC(BaseIndicator):
         high_data, input_type, index = self.validate_input(high)
         low_data, _, _ = self.validate_input(low)
         
-        # Calculate Awesome Oscillator
-        ao_raw = self._ao.calculate(high, low)
-        
-        # Ensure numpy array for numba SMA calculation
-        if isinstance(ao_raw, pd.Series):
-            ao_data = ao_raw.values.astype(np.float64)
-        else:
-            ao_data = ao_raw.astype(np.float64)
-        
-        # Calculate SMA of AO
-        ao_sma = self._calculate_sma(ao_data, period)
-        
-        # Calculate AC (array diff)
-        result_arr = ao_data - ao_sma
+        result_arr = _backend.ac(high_data, low_data, period)
         return self.format_output(result_arr, input_type, index)
 
 
@@ -479,25 +441,7 @@ class PPO(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Calculate EMAs
-        fast_ema = self._calculate_ema(validated_data, fast_period)
-        slow_ema = self._calculate_ema(validated_data, slow_period)
-        
-        # Calculate PPO line
-        ppo_line = np.empty_like(validated_data)
-        for i in range(len(validated_data)):
-            if slow_ema[i] != 0:
-                ppo_line[i] = ((fast_ema[i] - slow_ema[i]) / slow_ema[i]) * 100
-            else:
-                ppo_line[i] = 0
-        
-        # Calculate signal line
-        signal_line = self._calculate_ema(ppo_line, signal_period)
-        
-        # Calculate histogram
-        histogram = ppo_line - signal_line
-        
-        results = (ppo_line, signal_line, histogram)
+        results = _backend.ppo(validated_data, fast_period, slow_period, signal_period)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -563,16 +507,7 @@ class PO(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        if ma_type.upper() == "SMA":
-            fast_ma = self._calculate_sma(validated_data, fast_period)
-            slow_ma = self._calculate_sma(validated_data, slow_period)
-        elif ma_type.upper() == "EMA":
-            fast_ma = self._calculate_ema(validated_data, fast_period)
-            slow_ma = self._calculate_ema(validated_data, slow_period)
-        else:
-            raise ValueError(f"Unsupported MA type: {ma_type}")
-        
-        result = fast_ma - slow_ma
+        result = _backend.price_oscillator(validated_data, fast_period, slow_period, ma_type)
         return self.format_output(result, input_type, index)
 
 
@@ -626,28 +561,7 @@ class DPO(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Calculate SMA
-        sma = self._calculate_sma(validated_data, period)
-        
-        # Calculate barsback = period/2 + 1 (TradingView formula)
-        barsback = int(period / 2 + 1)
-        
-        # Calculate DPO
-        dpo = np.full_like(validated_data, np.nan)
-        
-        if is_centered:
-            # Centered mode: close[barsback] - ma
-            # DPO line is offset to the left
-            for i in range(barsback, len(validated_data)):
-                if not np.isnan(sma[i]):
-                    dpo[i] = validated_data[i - barsback] - sma[i]
-        else:
-            # Non-centered mode: close - ma[barsback] 
-            # DPO shifts back to match current price
-            for i in range(barsback, len(validated_data)):
-                if not np.isnan(sma[i - barsback]):
-                    dpo[i] = validated_data[i] - sma[i - barsback]
-        
+        dpo = _backend.dpo(validated_data, period, is_centered)
         return self.format_output(dpo, input_type, index)
 
 
@@ -738,7 +652,7 @@ class AROONOSC(BaseIndicator):
         high_data, low_data = self.align_arrays(high_data, low_data)
         self.validate_period(period, len(high_data))
         
-        result = self._calculate_aroon_osc(high_data, low_data, period)
+        result = _backend.aroon_osc(high_data, low_data, period)
         return self.format_output(result, input_type, index)
 
 

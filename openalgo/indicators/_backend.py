@@ -615,6 +615,110 @@ def session_vwap(source, volume, starts):
     return vwap, sd
 
 
+def cmo(data, period):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.cmo(data, period)
+    raise RuntimeError("cmo requires the _oaindicators extension")
+
+
+def roc_osc(data, period):
+    """ROC with else-0 (oscillators.ROC): 0 when divisor is 0, NaN warm-up."""
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period >= n:
+        return out
+    prev = data[:-period]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out[period:] = np.where(prev != 0, (data[period:] - prev) / np.where(prev == 0, 1.0, prev) * 100.0, 0.0)
+    return out
+
+
+def trix(data, length):
+    data = _f(data)
+    length = int(length)
+    e = ema(ema(ema(np.log(data), length), length), length)
+    out = np.full(data.size, np.nan)
+    out[1:] = (e[1:] - e[:-1]) * 10000.0
+    return out
+
+
+def ao(high, low, fast_period, slow_period):
+    high, low = _f(high), _f(low)
+    mp = (high + low) / 2.0
+    return _win_mean(mp, int(fast_period)) - _win_mean(mp, int(slow_period))
+
+
+def ac(high, low, period):
+    a = ao(high, low, 5, 34)
+    return a - _win_mean(a, int(period))
+
+
+def ppo(data, fast_period, slow_period, signal_period):
+    data = _f(data)
+    fe = ema(data, int(fast_period))
+    se = ema(data, int(slow_period))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ppo_line = np.where(se != 0, (fe - se) / np.where(se == 0, 1.0, se) * 100.0, 0.0)
+    signal_line = ema(ppo_line, int(signal_period))
+    return ppo_line, signal_line, ppo_line - signal_line
+
+
+def price_oscillator(data, fast_period, slow_period, ma_type):
+    data = _f(data)
+    if ma_type.upper() == "SMA":
+        fast_ma = _win_mean(data, int(fast_period))
+        slow_ma = _win_mean(data, int(slow_period))
+    elif ma_type.upper() == "EMA":
+        fast_ma = ema(data, int(fast_period))
+        slow_ma = ema(data, int(slow_period))
+    else:
+        raise ValueError(f"Unsupported MA type: {ma_type}")
+    return fast_ma - slow_ma
+
+
+def dpo(data, period, is_centered):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    sma_ = _win_mean(data, period)
+    barsback = int(period / 2 + 1)
+    out = np.full(n, np.nan)
+    if is_centered:
+        for i in range(barsback, n):
+            if not np.isnan(sma_[i]):
+                out[i] = data[i - barsback] - sma_[i]
+    else:
+        for i in range(barsback, n):
+            if not np.isnan(sma_[i - barsback]):
+                out[i] = data[i] - sma_[i - barsback]
+    return out
+
+
+def aroon_osc(high, low, period):
+    high, low = _f(high), _f(low)
+    period = int(period)
+    n = high.size
+    out = np.full(n, np.nan)
+    lookback = period + 1
+    for i in range(lookback - 1, n):
+        hw = high[i - lookback + 1:i + 1]
+        lw = low[i - lookback + 1:i + 1]
+        hp = lp = 0
+        for j in range(len(hw)):
+            if hw[j] > hw[hp]:
+                hp = j
+            if lw[j] < lw[lp]:
+                lp = j
+        bsh = len(hw) - 1 - hp
+        bsl = len(lw) - 1 - lp
+        out[i] = 100 * (period - bsh) / period - 100 * (period - bsl) / period
+    return out
+
+
 def vwma_strict(values, volume, length):
     """Per-window VWMA that skips NaN and yields NaN when window volume <= 0
     (matches OBVSmoothed._calculate_vwma)."""

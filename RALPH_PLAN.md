@@ -105,8 +105,14 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   - [x] Volume remaining: OBVSmoothed (composes migrated OBV/SMA/EMA/WMA/BB +
         rma_smma/vwma_strict helpers), VWAP (rust session_vwap kernel; was already
         numba-free). All bit-exact. **VOLUME MODULE COMPLETE (15/15).**
-  - [ ] oscillators / statistics / hybrid modules.
-        59 of ~90 indicators migrated. (TREND, MOMENTUM, VOLATILITY, VOLUME complete.)
+  - [x] Oscillators batch 1: ROC, CMO, TRIX, AO, AC, PPO, PO, DPO, AROONOSC.
+        Composed in _backend (roc_osc/trix/ao/ac/ppo/price_oscillator/dpo/aroon_osc;
+        cmo via rust). All bit-exact except CMO 2.7e-13 (rolling vs per-window, within
+        1e-12 rel). benchmark/oscillator_parity.py.
+  - [ ] Oscillators batch 2: UO, StochRSI, RVI(vigor), CHO, CHOP, KST, TSI, VI,
+        GatorOscillator, STC, Coppock.
+  - [ ] statistics / hybrid modules.
+        67 of ~90 indicators migrated.
         NOTE: PVI._with_signal secondary method still references numba EMA - swap in
         Phase 3 cleanup along with all remaining _calculate_* numba staticmethods.
         NOTE: _backend.frama and _backend.fisher numpy fallbacks raise (rust-only);

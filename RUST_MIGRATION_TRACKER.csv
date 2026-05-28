@@ -65,15 +65,15 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 63,Volume,Klinger Volume Oscillator,ta.kvo,KlingerVolumeOscillator,volume.py,"high,low,close,volume","trig_len,fast_x,slow_x","kvo,trigger",—,Yes,High,2,Migrated; parity PASS,1e-12 rel,Volume force EMA spread
 64,Volume,Price Volume Trend,ta.pvt,PriceVolumeTrend,volume.py,"close,volume",—,series,—,Yes,Low,2,Migrated; parity PASS,1e-12 rel,Cumulative pct-change*volume
 65,Volume,Relative Volume,ta.rvol,RVOL,volume.py,volume,period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,Volume / SMA(volume)
-66,Oscillator,Chande Momentum Osc,ta.cmo,CMO,oscillators.py,close,period,series,CMO,No,Low,2,Not Started,1e-12 rel,Sum up/down momentum
-67,Oscillator,TRIX,ta.trix,TRIX,oscillators.py,close,length,series,TRIX,Yes,Low,2,Not Started,1e-12 rel,ROC of triple EMA of log price
+66,Oscillator,Chande Momentum Osc,ta.cmo,CMO,oscillators.py,close,period,series,CMO,No,Low,2,Migrated; parity PASS,1e-12 rel,Sum up/down momentum
+67,Oscillator,TRIX,ta.trix,TRIX,oscillators.py,close,length,series,TRIX,Yes,Low,2,Migrated; parity PASS,1e-12 rel,ROC of triple EMA of log price
 68,Oscillator,Ultimate Oscillator,ta.uo_oscillator,UO,oscillators.py,"high,low,close","period1,period2,period3",series,ULTOSC,No,Medium,2,Not Started,1e-12 rel,Duplicate of ta.ultimate_oscillator
-69,Oscillator,Awesome Oscillator,ta.awesome_oscillator,AO,oscillators.py,"high,low","fast,slow",series,—,No,Low,2,Not Started,1e-12 rel,SMA(median price) spread
-70,Oscillator,Accelerator Oscillator,ta.accelerator_oscillator,AC,oscillators.py,"high,low",period,series,—,No,Low,2,Not Started,1e-12 rel,AO minus SMA(AO)
-71,Oscillator,Percentage Price Osc,ta.ppo,PPO,oscillators.py,close,"fast,slow,signal","ppo,signal,hist",PPO,Yes,Low,2,Not Started,1e-12 rel,EMA pct spread + signal
-72,Oscillator,Price Oscillator,ta.po,PO,oscillators.py,close,"fast,slow,ma_type",series,APO,Yes,Low,2,Not Started,1e-12 rel,MA spread (SMA/EMA)
-73,Oscillator,Detrended Price Osc,ta.dpo,DPO,oscillators.py,close,"period,is_centered",series,—,No,Low,2,Not Started,1e-12 rel,Price minus shifted SMA
-74,Oscillator,Aroon Oscillator,ta.aroon_oscillator,AROONOSC,oscillators.py,"high,low",period,series,AROONOSC,No,Low,2,Not Started,bit-exact,AroonUp - AroonDown
+69,Oscillator,Awesome Oscillator,ta.awesome_oscillator,AO,oscillators.py,"high,low","fast,slow",series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,SMA(median price) spread
+70,Oscillator,Accelerator Oscillator,ta.accelerator_oscillator,AC,oscillators.py,"high,low",period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,AO minus SMA(AO)
+71,Oscillator,Percentage Price Osc,ta.ppo,PPO,oscillators.py,close,"fast,slow,signal","ppo,signal,hist",PPO,Yes,Low,2,Migrated; parity PASS,1e-12 rel,EMA pct spread + signal
+72,Oscillator,Price Oscillator,ta.po,PO,oscillators.py,close,"fast,slow,ma_type",series,APO,Yes,Low,2,Migrated; parity PASS,1e-12 rel,MA spread (SMA/EMA)
+73,Oscillator,Detrended Price Osc,ta.dpo,DPO,oscillators.py,close,"period,is_centered",series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,Price minus shifted SMA
+74,Oscillator,Aroon Oscillator,ta.aroon_oscillator,AROONOSC,oscillators.py,"high,low",period,series,AROONOSC,No,Low,2,Migrated; parity PASS,bit-exact,AroonUp - AroonDown
 75,Oscillator,Stochastic RSI,ta.stochrsi,StochRSI,oscillators.py,close,"rsi_period,stoch_period,k,d","k,d",STOCHRSI,Yes,Medium,2,Not Started,1e-12 rel,Stochastic applied to RSI
 76,Oscillator,Relative Vigor Index,ta.rvi,RVI,oscillators.py,"open,high,low,close",period,"rvi,signal",—,No,Medium,2,Not Started,1e-12 rel,SWMA ratio (note: name clash w/ volatility RVI)
 77,Oscillator,Chaikin Oscillator,ta.cho,CHO,oscillators.py,"high,low,close,volume","fast,slow",series,ADOSC,Yes,Medium,2,Not Started,1e-12 rel,EMA spread of ADL
