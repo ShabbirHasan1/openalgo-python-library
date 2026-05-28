@@ -562,6 +562,206 @@ pub fn kama_tv(data: &[f64], length: usize, fast_length: usize, slow_length: usi
     result
 }
 
+/// Supertrend (TradingView band-flip). Returns (supertrend, direction) where
+/// direction is -1 uptrend / +1 downtrend. ATR via Wilder smoothing.
+pub fn supertrend(
+    high: &[f64],
+    low: &[f64],
+    close: &[f64],
+    period: usize,
+    multiplier: f64,
+) -> (Vec<f64>, Vec<f64>) {
+    let n = close.len();
+    let mut st = nan_vec(n);
+    let mut dir = nan_vec(n);
+    if period == 0 || n == 0 {
+        return (st, dir);
+    }
+    let atr = atr_wilder(high, low, close, period);
+    let mut ub = vec![0.0f64; n];
+    let mut lb = vec![0.0f64; n];
+    for i in 0..n {
+        let hl = (high[i] + low[i]) / 2.0;
+        ub[i] = hl + multiplier * atr[i];
+        lb[i] = hl - multiplier * atr[i];
+    }
+    let mut fu = nan_vec(n);
+    let mut fl = nan_vec(n);
+    let fv = period - 1;
+    if fv >= n {
+        return (st, dir);
+    }
+    fu[fv] = ub[fv];
+    fl[fv] = lb[fv];
+    dir[fv] = 1.0;
+    st[fv] = fu[fv];
+    for i in fv + 1..n {
+        fl[i] = if lb[i] > fl[i - 1] || close[i - 1] < fl[i - 1] {
+            lb[i]
+        } else {
+            fl[i - 1]
+        };
+        fu[i] = if ub[i] < fu[i - 1] || close[i - 1] > fu[i - 1] {
+            ub[i]
+        } else {
+            fu[i - 1]
+        };
+        if st[i - 1] == fu[i - 1] {
+            dir[i] = if close[i] > fu[i] { -1.0 } else { 1.0 };
+        } else {
+            dir[i] = if close[i] < fl[i] { 1.0 } else { -1.0 };
+        }
+        st[i] = if dir[i] == -1.0 { fl[i] } else { fu[i] };
+    }
+    (st, dir)
+}
+
+/// Chande Kroll Stop. Returns (long_stop, short_stop). ATR via Wilder smoothing;
+/// first stops over `p`, then nested extrema of first stops over `q`.
+pub fn chande_kroll_stop(
+    high: &[f64],
+    low: &[f64],
+    close: &[f64],
+    p: usize,
+    x: f64,
+    q: usize,
+) -> (Vec<f64>, Vec<f64>) {
+    let n = close.len();
+    let mut long_stop = nan_vec(n);
+    let mut short_stop = nan_vec(n);
+    if p == 0 || q == 0 || n < p {
+        return (long_stop, short_stop);
+    }
+    let atr = atr_wilder(high, low, close, p);
+    let mut fhs = nan_vec(n);
+    let mut fls = nan_vec(n);
+    for i in p - 1..n {
+        let mut hh = high[i - p + 1];
+        let mut ll = low[i - p + 1];
+        for k in i - p + 1..i + 1 {
+            if high[k] > hh {
+                hh = high[k];
+            }
+            if low[k] < ll {
+                ll = low[k];
+            }
+        }
+        fhs[i] = hh - x * atr[i];
+        fls[i] = ll + x * atr[i];
+    }
+    let start = p + q - 2;
+    for i in start..n {
+        let qs = i + 1 - q;
+        let mut mx = f64::NEG_INFINITY;
+        let mut any_h = false;
+        let mut mn = f64::INFINITY;
+        let mut any_l = false;
+        for k in qs..i + 1 {
+            if !fhs[k].is_nan() {
+                if fhs[k] > mx {
+                    mx = fhs[k];
+                }
+                any_h = true;
+            }
+            if !fls[k].is_nan() {
+                if fls[k] < mn {
+                    mn = fls[k];
+                }
+                any_l = true;
+            }
+        }
+        if any_h {
+            short_stop[i] = mx;
+        }
+        if any_l {
+            long_stop[i] = mn;
+        }
+    }
+    (long_stop, short_stop)
+}
+
+/// FRAMA (TradingView fractal adaptive MA on hl2, with trailing SMA(5) smoothing).
+/// Uses log/exp so parity is transcendental-tolerance, not bit-exact.
+pub fn frama(high: &[f64], low: &[f64], period: usize) -> Vec<f64> {
+    let n = high.len();
+    let mut filt = nan_vec(n);
+    let price: Vec<f64> = (0..n).map(|i| (high[i] + low[i]) / 2.0).collect();
+    if n > 0 {
+        filt[0] = price[0];
+    }
+    let half = period / 2;
+    let ln2 = 2.0_f64.ln();
+    for i in 1..n {
+        if i >= period && half > 0 {
+            let mut hmax = high[i - period + 1];
+            let mut lmin = low[i - period + 1];
+            for k in i - period + 1..i + 1 {
+                if high[k] > hmax {
+                    hmax = high[k];
+                }
+                if low[k] < lmin {
+                    lmin = low[k];
+                }
+            }
+            let n3 = (hmax - lmin) / period as f64;
+            let mut hh = high[i];
+            let mut ll = low[i];
+            for count in 0..half {
+                let idx = i - count;
+                if high[idx] > hh {
+                    hh = high[idx];
+                }
+                if low[idx] < ll {
+                    ll = low[idx];
+                }
+            }
+            let n1 = (hh - ll) / half as f64;
+            let mut hh2 = high[i - half];
+            let mut ll2 = low[i - half];
+            for count in half..period {
+                let idx = i - count;
+                if high[idx] > hh2 {
+                    hh2 = high[idx];
+                }
+                if low[idx] < ll2 {
+                    ll2 = low[idx];
+                }
+            }
+            let n2 = (hh2 - ll2) / half as f64;
+            let dimen = if n1 > 0.0 && n2 > 0.0 && n3 > 0.0 {
+                ((n1 + n2).ln() - n3.ln()) / ln2
+            } else {
+                1.0
+            };
+            let mut alpha = (-4.6 * (dimen - 1.0)).exp();
+            alpha = alpha.min(1.0).max(0.01);
+            filt[i] = alpha * price[i] + (1.0 - alpha) * filt[i - 1];
+        } else {
+            filt[i] = price[i];
+        }
+    }
+    let mut smoothed = nan_vec(n);
+    for i in 0..n {
+        if i < period + 1 {
+            smoothed[i] = price[i];
+        } else if i >= 4 {
+            let ws = i - 4;
+            let mut s = 0.0;
+            let mut cnt = 0usize;
+            for j in ws..i + 1 {
+                if !filt[j].is_nan() {
+                    s += filt[j];
+                    cnt += 1;
+                }
+            }
+            smoothed[i] = if cnt > 0 { s / cnt as f64 } else { filt[i] };
+        } else {
+            smoothed[i] = filt[i];
+        }
+    }
+    smoothed
+}
+
 /// Ulcer Index (running-peak drawdown RMS * 100) over `period`.
 pub fn ulcer_index(data: &[f64], period: usize) -> Vec<f64> {
     let n = data.len();
@@ -992,6 +1192,36 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn supertrend_shapes() {
+        let h = [10.0, 11.0, 12.0, 13.0, 14.0, 15.0];
+        let l = [9.0, 10.0, 11.0, 12.0, 13.0, 14.0];
+        let c = [9.5, 10.5, 11.5, 12.5, 13.5, 14.5];
+        let (st, dir) = supertrend(&h, &l, &c, 3, 3.0);
+        assert!(st[1].is_nan() && dir[1].is_nan());
+        assert!(st[2].is_finite() && (dir[2] == 1.0 || dir[2] == -1.0));
+    }
+
+    #[test]
+    fn chande_kroll_shapes() {
+        let h: Vec<f64> = (1..=30).map(|x| x as f64 + 1.0).collect();
+        let l: Vec<f64> = (1..=30).map(|x| x as f64 - 1.0).collect();
+        let c: Vec<f64> = (1..=30).map(|x| x as f64).collect();
+        let (ls, ss) = chande_kroll_stop(&h, &l, &c, 10, 1.0, 9);
+        assert_eq!(ls.len(), 30);
+        assert!(ls[0].is_nan());
+        assert!(ls[18].is_finite() && ss[18].is_finite());
+    }
+
+    #[test]
+    fn frama_runs() {
+        let h: Vec<f64> = (1..=40).map(|x| (x as f64).sin() + 10.0).collect();
+        let l: Vec<f64> = (1..=40).map(|x| (x as f64).sin() + 9.0).collect();
+        let r = frama(&h, &l, 16);
+        assert_eq!(r.len(), 40);
+        assert!(r[39].is_finite());
     }
 
     #[test]

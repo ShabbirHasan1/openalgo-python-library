@@ -82,9 +82,14 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   - [x] Migrated: ALMA, McGinley, VIDYA, Alligator, MA Envelopes (rust kernels alma/
         mcginley/vidya; alligator=ema_wilder+shift; ma_env=window-mean/ema; cargo
         21/21). VIDYA/Alligator/MA-Env bit-exact; ALMA/McGinley <=1e-12 (exp/pow).
-  - [ ] Remaining trend (complex stateful, multi-output): Supertrend, Ichimoku,
-        FRAMA, ChandeKrollStop. Then volatility/volume/oscillators/stats/hybrid.
-        23 of ~90 indicators migrated.
+  - [x] Complex trend migrated: Supertrend, Ichimoku, FRAMA, ChandeKrollStop
+        (rust kernels supertrend/chande_kroll_stop/frama multi-output; ichimoku
+        composed from highest/lowest; cargo 24/24). ALL bit-exact (0.0) incl FRAMA
+        log/exp. **TREND MODULE COMPLETE (20/20).**
+  - [ ] Remaining momentum: BOP, ElderRay, Fisher, CRSI.
+  - [ ] volatility / volume / oscillators / statistics / hybrid modules.
+        27 of ~90 indicators migrated.
+        NOTE: _backend.frama numpy fallback raises (rust-only); add fallback later.
 
   LOCAL BUILD METHOD (until maturin/CI phase): from rust/ run
   `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build --release -p oa_py`

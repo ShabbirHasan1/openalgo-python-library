@@ -441,7 +441,7 @@ class Supertrend(BaseIndicator):
         if multiplier <= 0:
             raise ValueError(f"Multiplier must be positive, got {multiplier}")
         
-        supertrend_result, direction_result = self._calculate_supertrend(high_data, low_data, close_data, period, multiplier)
+        supertrend_result, direction_result = _backend.supertrend(high_data, low_data, close_data, period, multiplier)
         return self.format_multiple_outputs((supertrend_result, direction_result), input_type, index)
 
 
@@ -569,8 +569,8 @@ class Ichimoku(BaseIndicator):
             if period <= 0:
                 raise ValueError(f"{name} must be positive, got {period}")
         
-        results = self._calculate_ichimoku_tv(high_data, low_data, close_data, conversion_periods, 
-                                             base_periods, lagging_span2_periods, displacement)
+        results = _backend.ichimoku(high_data, low_data, close_data, conversion_periods,
+                                    base_periods, lagging_span2_periods, displacement)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -1108,7 +1108,7 @@ class FRAMA(BaseIndicator):
         if period % 2 != 0:
             raise ValueError("Period must be even for FRAMA calculation")
         
-        result = self._calculate_frama_tv(high_data, low_data, period)
+        result = _backend.frama(high_data, low_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1240,8 +1240,8 @@ class ChandeKrollStop(BaseIndicator):
         if x <= 0:
             raise ValueError(f"ATR coefficient (x) must be positive, got {x}")
         
-        long_stop, short_stop = self._calculate_chande_kroll_stop(high_data, low_data, close_data, p, x, q)
-        
+        long_stop, short_stop = _backend.chande_kroll_stop(high_data, low_data, close_data, p, x, q)
+
         results = (long_stop, short_stop)
         return self.format_multiple_outputs(results, input_type, index)
 

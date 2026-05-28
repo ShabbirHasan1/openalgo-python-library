@@ -59,6 +59,66 @@ wrap_hlc_period!(cci, oa_core::cci);
 wrap_hlc_period!(williams_r, oa_core::williams_r);
 
 #[pyfunction]
+#[pyo3(signature = (high, low, period))]
+fn frama<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    period: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let out = oa_core::frama(high.as_slice()?, low.as_slice()?, period);
+    Ok(out.into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
+#[pyo3(signature = (high, low, close, period, multiplier))]
+fn supertrend<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    close: PyReadonlyArray1<'py, f64>,
+    period: usize,
+    multiplier: f64,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let (st, dir) = oa_core::supertrend(
+        high.as_slice()?,
+        low.as_slice()?,
+        close.as_slice()?,
+        period,
+        multiplier,
+    );
+    Ok((
+        st.into_pyarray_bound(py).unbind(),
+        dir.into_pyarray_bound(py).unbind(),
+    ))
+}
+
+#[pyfunction]
+#[pyo3(signature = (high, low, close, p, x, q))]
+fn chande_kroll_stop<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    close: PyReadonlyArray1<'py, f64>,
+    p: usize,
+    x: f64,
+    q: usize,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let (ls, ss) = oa_core::chande_kroll_stop(
+        high.as_slice()?,
+        low.as_slice()?,
+        close.as_slice()?,
+        p,
+        x,
+        q,
+    );
+    Ok((
+        ls.into_pyarray_bound(py).unbind(),
+        ss.into_pyarray_bound(py).unbind(),
+    ))
+}
+
+#[pyfunction]
 #[pyo3(signature = (high, low, close, k_period, smooth_k, d_period))]
 fn stochastic<'py>(
     py: Python<'py>,
@@ -268,6 +328,9 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cci, m)?)?;
     m.add_function(wrap_pyfunction!(williams_r, m)?)?;
     m.add_function(wrap_pyfunction!(stochastic, m)?)?;
+    m.add_function(wrap_pyfunction!(frama, m)?)?;
+    m.add_function(wrap_pyfunction!(supertrend, m)?)?;
+    m.add_function(wrap_pyfunction!(chande_kroll_stop, m)?)?;
     m.add_function(wrap_pyfunction!(true_range, m)?)?;
     m.add_function(wrap_pyfunction!(atr_wilder, m)?)?;
     m.add_function(wrap_pyfunction!(atr_sma, m)?)?;

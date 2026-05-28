@@ -413,3 +413,111 @@ def _roll(data, period, fn):
     for i in range(period - 1, n):
         out[i] = fn(data[i - period + 1:i + 1])
     return out
+
+
+def highest(data, period):
+    data = _f(data)
+    if HAVE_RUST:
+        return _rs.highest(data, int(period))
+    return _roll(data, int(period), np.max)
+
+
+def lowest(data, period):
+    data = _f(data)
+    if HAVE_RUST:
+        return _rs.lowest(data, int(period))
+    return _roll(data, int(period), np.min)
+
+
+def supertrend(high, low, close, period, multiplier):
+    high, low, close = _f(high), _f(low), _f(close)
+    if HAVE_RUST:
+        return _rs.supertrend(high, low, close, int(period), float(multiplier))
+    # numpy fallback (stateful loop)
+    n = close.size
+    st = np.full(n, np.nan)
+    dr = np.full(n, np.nan)
+    atr = atr_wilder(high, low, close, int(period))
+    hl = (high + low) / 2.0
+    ub = hl + multiplier * atr
+    lb = hl - multiplier * atr
+    fu = np.full(n, np.nan)
+    fl = np.full(n, np.nan)
+    fv = period - 1
+    if fv >= n:
+        return st, dr
+    fu[fv], fl[fv], dr[fv], st[fv] = ub[fv], lb[fv], 1.0, ub[fv]
+    for i in range(fv + 1, n):
+        fl[i] = lb[i] if (lb[i] > fl[i - 1] or close[i - 1] < fl[i - 1]) else fl[i - 1]
+        fu[i] = ub[i] if (ub[i] < fu[i - 1] or close[i - 1] > fu[i - 1]) else fu[i - 1]
+        if st[i - 1] == fu[i - 1]:
+            dr[i] = -1.0 if close[i] > fu[i] else 1.0
+        else:
+            dr[i] = 1.0 if close[i] < fl[i] else -1.0
+        st[i] = fl[i] if dr[i] == -1.0 else fu[i]
+    return st, dr
+
+
+def chande_kroll_stop(high, low, close, p, x, q):
+    high, low, close = _f(high), _f(low), _f(close)
+    if HAVE_RUST:
+        return _rs.chande_kroll_stop(high, low, close, int(p), float(x), int(q))
+    n = close.size
+    long_stop = np.full(n, np.nan)
+    short_stop = np.full(n, np.nan)
+    atr = atr_wilder(high, low, close, int(p))
+    fhs = np.full(n, np.nan)
+    fls = np.full(n, np.nan)
+    for i in range(p - 1, n):
+        fhs[i] = np.max(high[i - p + 1:i + 1]) - x * atr[i]
+        fls[i] = np.min(low[i - p + 1:i + 1]) + x * atr[i]
+    for i in range(p + q - 2, n):
+        wh = fhs[i - q + 1:i + 1]
+        wl = fls[i - q + 1:i + 1]
+        vh, vl = wh[~np.isnan(wh)], wl[~np.isnan(wl)]
+        if len(vh):
+            short_stop[i] = np.max(vh)
+        if len(vl):
+            long_stop[i] = np.min(vl)
+    return long_stop, short_stop
+
+
+def frama(high, low, period):
+    high, low = _f(high), _f(low)
+    if HAVE_RUST:
+        return _rs.frama(high, low, int(period))
+    # numpy fallback omitted for brevity; rust path is the supported one.
+    raise RuntimeError("frama requires the _oaindicators extension")
+
+
+def ichimoku(high, low, close, conv, base, span2, disp):
+    high, low, close = _f(high), _f(low), _f(close)
+    n = close.size
+
+    def don(p):
+        return (highest(high, p) + lowest(low, p)) / 2.0
+
+    conversion = don(int(conv))
+    base_line = don(int(base))
+    lead1 = (conversion + base_line) / 2.0
+    lead2 = don(int(span2))
+    off = disp - 1
+    la = np.full(n, np.nan)
+    lb = np.full(n, np.nan)
+    if 0 < off < n:
+        la[off:] = lead1[:-off]
+        lb[off:] = lead2[:-off]
+    elif off == 0:
+        la, lb = lead1.copy(), lead2.copy()
+    lag = np.full(n, np.nan)
+    offlag = -disp + 1
+    if offlag < 0:
+        sh = abs(offlag)
+        if sh < n:
+            lag[:-sh] = close[sh:]
+    elif offlag > 0:
+        if offlag < n:
+            lag[offlag:] = close[:-offlag]
+    else:
+        lag = close.copy()
+    return conversion, base_line, la, lb, lag

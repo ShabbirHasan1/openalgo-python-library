@@ -20,7 +20,8 @@ import pandas as pd
 from openalgo.indicators import _backend as b
 from openalgo.indicators import utils as u
 from openalgo.indicators.trend import (KAMA, ZLEMA, T3, TRIMA, ALMA, McGinley, VIDYA,
-                                        Alligator, MovingAverageEnvelopes)
+                                        Alligator, MovingAverageEnvelopes,
+                                        Supertrend, Ichimoku, FRAMA, ChandeKrollStop)
 from openalgo import ta
 
 DATA = Path(__file__).resolve().parent / "data"
@@ -45,6 +46,8 @@ def main():
     df = pd.read_csv(DATA / "RELIANCE_D.csv", index_col=0)
     c = df["close"].to_numpy(np.float64)
     v = df["volume"].to_numpy(np.float64)
+    h = df["high"].to_numpy(np.float64)
+    lo = df["low"].to_numpy(np.float64)
 
     # Direct ports vs original numba kernels (bit-exact target)
     cmp("vwma(20)", b.vwma(c, v, 20), u.vwma_optimized(c, v, 20))
@@ -78,6 +81,21 @@ def main():
     cmp("dema(20)", ta.dema(c, 20), _dema_ref(c, 20))
     cmp("tema(20)", ta.tema(c, 20), _tema_ref(c, 20))
     cmp("hma(20)", ta.hma(c, 20), _hma_ref(c, 20))
+
+    # Complex stateful / multi-output
+    st, dr = b.supertrend(h, lo, c, 10, 3.0)
+    rst, rdr = Supertrend._calculate_supertrend(h, lo, c, 10, 3.0)
+    cmp("supertrend.line", st, rst)
+    cmp("supertrend.dir", dr, rdr)
+    ls, ss = b.chande_kroll_stop(h, lo, c, 10, 1.0, 9)
+    rls, rss = ChandeKrollStop._calculate_chande_kroll_stop(h, lo, c, 10, 1.0, 9)
+    cmp("ckstop.long", ls, rls)
+    cmp("ckstop.short", ss, rss)
+    ic = b.ichimoku(h, lo, c, 9, 26, 52, 26)
+    ric = Ichimoku._calculate_ichimoku_tv(h, lo, c, 9, 26, 52, 26)
+    for nm, g, r in zip(["conv", "base", "spanA", "spanB", "lag"], ic, ric):
+        cmp(f"ichimoku.{nm}", g, r)
+    cmp("frama(26)", b.frama(h, lo, 26), FRAMA._calculate_frama_tv(h, lo, 26), tol=1e-8)
 
     print("\nRESULT:", "ALL TREND PARITY PASS" if not FAILS else f"FAILURES: {FAILS}")
     return 1 if FAILS else 0
