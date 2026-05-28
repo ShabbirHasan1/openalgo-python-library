@@ -25,6 +25,7 @@ macro_rules! wrap_period {
 }
 
 wrap_period!(sma, oa_core::sma);
+wrap_period!(wma, oa_core::wma);
 wrap_period!(rolling_sum, oa_core::rolling_sum);
 wrap_period!(rolling_variance, oa_core::rolling_variance);
 wrap_period!(stdev, oa_core::stdev);
@@ -151,9 +152,22 @@ macro_rules! wrap_latch {
 wrap_latch!(exrem, oa_core::exrem);
 wrap_latch!(flip, oa_core::flip);
 
+#[pyfunction]
+#[pyo3(signature = (expr, array, n))]
+fn valuewhen<'py>(
+    py: Python<'py>,
+    expr: PyReadonlyArray1<'py, f64>,
+    array: PyReadonlyArray1<'py, f64>,
+    n: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let out = oa_core::valuewhen(expr.as_slice()?, array.as_slice()?, n);
+    Ok(out.into_pyarray_bound(py).unbind())
+}
+
 #[pymodule]
 fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sma, m)?)?;
+    m.add_function(wrap_pyfunction!(wma, m)?)?;
     m.add_function(wrap_pyfunction!(rolling_sum, m)?)?;
     m.add_function(wrap_pyfunction!(rolling_variance, m)?)?;
     m.add_function(wrap_pyfunction!(stdev, m)?)?;
@@ -177,6 +191,7 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(falling, m)?)?;
     m.add_function(wrap_pyfunction!(exrem, m)?)?;
     m.add_function(wrap_pyfunction!(flip, m)?)?;
+    m.add_function(wrap_pyfunction!(valuewhen, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

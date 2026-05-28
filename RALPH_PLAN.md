@@ -56,7 +56,18 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         Python reference (max diff 0.0; a few at ~1e-13, well under atol=1e-12/
         rtol=1e-9). TA-Lib cross-check matches for sma/stdev/sum/var/roc/highest/
         lowest/true_range; ema/atr/cmo differ only by documented convention.
-  - [ ] valuewhen kernel (port + test) — deferred from primitive batch.
+  - [x] valuewhen + wma kernels ported (+cargo tests, 13/13 green) and exposed.
+
+- **Phase 1 — Backend seam + first wrappers** [IN PROGRESS]
+  - [x] `openalgo/indicators/_backend.py`: Rust-backed kernels with pure-numpy
+        fallback (no numba in either path). Holds sma/wma/ema so far.
+  - [x] SMA/EMA/WMA classes swapped to `_backend` -> public `ta.sma/ema/wma` now
+        numba-free. `benchmark/wrapper_parity.py`: ta.sma==pandas, ta.wma==TA-Lib,
+        ta.ema==manual (all 0.00 diff), Series/index/list typing preserved.
+  - [x] `_warmup()` made defensive: **`import openalgo` now succeeds WITHOUT
+        NUMBA_DISABLE_JIT** (the numpy>=2 numba crash no longer breaks import).
+  - [ ] Swap remaining trend MAs that only need existing kernels.
+  - [ ] Add Phase-1 indicator kernels (RSI, MACD, BBands, ATR, Stochastic, CCI).
 
   LOCAL BUILD METHOD (until maturin/CI phase): from rust/ run
   `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build --release -p oa_py`
@@ -85,13 +96,14 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   NaN mask, identical length. Record pass/fail + timing into the tracker + a report.
 
 ## Next action for the loop
-Phase 0 complete. Next: begin the Phase-1 kernel build-out AND prove the wrapper-swap
-pattern end to end on one trivial indicator. Concretely:
-  1. Read trend.py SMA/EMA/WMA classes; port WMA + add `valuewhen` to oa_core (+tests).
-  2. Pick SMA: rewrite the SMA class `calculate` to call `_oaindicators.sma` (keeping
-     the exact public signature / pd.Series-in-Series-out behavior), with a pure-numpy
-     fallback if the extension is missing. Run the existing openalgo SMA test to prove
-     `ta.sma(...)` output is byte-identical. This validates the swap pattern before
-     scaling it to all indicators.
-  3. Extend parity.py with WMA; rebuild extension; re-run the gate.
-Then add Phase-1 indicator kernels (RSI, MACD, BBands, ATR, Stochastic, CCI, ...).
+Wrapper-swap pattern proven (SMA/EMA/WMA migrated; `import openalgo` fixed). Scale it:
+  1. Add Phase-1 kernels to oa_core (+cargo tests) and oa_py: rsi (Wilder), macd
+     (ema fast/slow + signal), bbands (sma +/- k*stdev), atr (alias atr_wilder),
+     stochastic, cci, williams_r. READ each class in momentum.py / volatility.py
+     FIRST to copy exact seeding/NaN semantics before porting.
+  2. Add `_backend.py` entries (rust + numpy fallback) for each.
+  3. Swap the matching classes to `_backend`; extend parity.py + wrapper_parity.py.
+  4. Rebuild ext, re-run BOTH gates; update tracker/plan; commit.
+Backlog: trend MAs reusing existing kernels (dema/tema/trima/hma/vwma/zlema/kama/t3),
+then statistics/oscillators/volume/hybrid; finally Phase 3 cleanup (delete numba_shim,
+drop numba dep + [indicators] extra) and Phase 4 maturin/CI.

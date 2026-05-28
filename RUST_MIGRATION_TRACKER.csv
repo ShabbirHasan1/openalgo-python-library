@@ -1,7 +1,7 @@
 ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_Lib_Reference,Recursive_Stateful,Complexity,Phase,Status,Parity_Target,Notes
-1,Primitive,Simple Moving Average,ta.sma,SMA,trend.py,close,period,series,SMA,No,Low,1,Kernel parity PASS,bit-exact,Core building block; rolling mean
-2,Primitive,Exponential Moving Average,ta.ema,EMA,trend.py,close,period,series,EMA,Yes,Low,1,Kernel parity PASS,1e-12 rel,Recursive; SMA-seeded; building block
-3,Primitive,Weighted Moving Average,ta.wma,WMA,trend.py,close,period,series,WMA,No,Low,1,Not Started,bit-exact,Linear-weighted window; building block
+1,Primitive,Simple Moving Average,ta.sma,SMA,trend.py,close,period,series,SMA,No,Low,1,Migrated; parity PASS,bit-exact,Core building block; rolling mean
+2,Primitive,Exponential Moving Average,ta.ema,EMA,trend.py,close,period,series,EMA,Yes,Low,1,Migrated; parity PASS,1e-12 rel,Recursive; SMA-seeded; building block
+3,Primitive,Weighted Moving Average,ta.wma,WMA,trend.py,close,period,series,WMA,No,Low,1,Migrated; parity PASS,bit-exact,Linear-weighted window; building block
 4,Primitive,Wilder RMA / SMMA,(internal),utils_ema,utils.py,series,period,series,—,Yes,Low,1,Kernel parity PASS,1e-12 rel,RMA smoothing used by RSI/ATR/ADX
 5,Primitive,Rolling Std Dev,(internal),stdev,utils.py,series,period,series,STDDEV,No,Low,1,Kernel parity PASS,1e-12 rel,Used by BBands/Keltner/HV
 6,Primitive,True Range,ta.true_range,TRANGE,volatility.py,"high,low,close",—,series,TRANGE,No,Low,1,Kernel parity PASS,bit-exact,Building block for ATR/NATR/DMI
@@ -107,4 +107,4 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 105,Utility,Falling,(util),falling,utils.py,series,length,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Monotonic down over length
 106,Utility,ExRem,(util),exrem,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Kernel parity PASS,bit-exact,Remove excess signals (AFL)
 107,Utility,Flip,(util),flip,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Kernel parity PASS,bit-exact,Toggle/latch signal (AFL)
-108,Utility,ValueWhen,(util),valuewhen,utils.py,"condition,source,occurrence",—,series,—,Yes,Medium,1,Not Started,bit-exact,Value at Nth prior true
+108,Utility,ValueWhen,(util),valuewhen,utils.py,"condition,source,occurrence",—,series,—,Yes,Medium,1,Kernel parity PASS,bit-exact,Value at Nth prior true

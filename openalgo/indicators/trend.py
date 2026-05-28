@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import sma, ema, highest, lowest, vwma_optimized, kama_optimized, atr_wilder
+from . import _backend
 
 
 class SMA(BaseIndicator):
@@ -62,7 +63,7 @@ class SMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_sma(validated_data, period)
+        result = _backend.sma(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -99,7 +100,7 @@ class EMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = ema(validated_data, period)
+        result = _backend.ema(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -152,7 +153,7 @@ class WMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_wma(validated_data, period)
+        result = _backend.wma(validated_data, period)
         return self.format_output(result, input_type, index)
 
 

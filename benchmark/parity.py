@@ -83,6 +83,8 @@ def build_cases(P):
     cases = [
         ("sma(14)", lambda: rs.sma(c, per), lambda: ref.sma(c, per), "f",
          (lambda: talib.SMA(c, per)) if HAVE_TALIB else None, "match"),
+        ("wma(14)", lambda: rs.wma(c, per), lambda: _ref_wma(c, per), "f",
+         (lambda: talib.WMA(c, per)) if HAVE_TALIB else None, "match"),
         ("ema(14)", lambda: rs.ema(c, per), lambda: ref.ema(c, per), "f",
          (lambda: talib.EMA(c, per)) if HAVE_TALIB else None, "info"),
         ("ema_wilder(14)", lambda: rs.ema_wilder(c, per), lambda: ref.ema_wilder(c, per), "f",
@@ -125,8 +127,25 @@ def build_cases(P):
          lambda: ref.cross(c, ref.sma(c, per)), "b", None, ""),
         ("rising(5)", lambda: rs.rising(c, 5), lambda: ref.rising(c, 5), "b", None, ""),
         ("falling(5)", lambda: rs.falling(c, 5), lambda: ref.falling(c, 5), "b", None, ""),
+        ("valuewhen", lambda: rs.valuewhen(_expr(c, per), c, 1),
+         lambda: ref.valuewhen(_expr(c, per), c, 1), "f", None, ""),
     ]
     return cases
+
+
+def _ref_wma(c, period):
+    n = len(c)
+    out = np.full(n, np.nan)
+    w = np.arange(1, period + 1, dtype=np.float64)
+    ws = w.sum()
+    for i in range(period - 1, n):
+        out[i] = float(np.dot(c[i - period + 1:i + 1], w) / ws)
+    return out
+
+
+def _expr(c, period):
+    """Boolean-like float array: close above its SMA (drives valuewhen)."""
+    return (c > np.nan_to_num(ref.sma(c, period), nan=np.inf)).astype(np.float64)
 
 
 def talib_diff(rust_vals, tfn):

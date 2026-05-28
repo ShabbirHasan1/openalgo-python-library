@@ -1607,7 +1607,13 @@ def _warmup():
     ADX._compute_di_dx(_ew, _ew, _ew, 2)
 
 
-_warmup()
+try:
+    # Warm-up only pre-compiles legacy numba kernels; it is a no-op for the Rust
+    # backend and must never break `import openalgo` (e.g. numba absent or, on
+    # numpy>=2, broken). Migrated indicators do not rely on it.
+    _warmup()
+except Exception:
+    pass
 
 
 # Make indicator classes available for advanced users

@@ -139,6 +139,24 @@ pub fn ema(data: &[f64], period: usize) -> Vec<f64> {
     result
 }
 
+/// Weighted Moving Average — linear weights 1..period. NaN for first `period-1`.
+pub fn wma(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if period == 0 || n < period {
+        return result;
+    }
+    let weight_sum = (period * (period + 1) / 2) as f64;
+    for i in period - 1..n {
+        let mut ws = 0.0;
+        for j in 0..period {
+            ws += data[i - period + 1 + j] * (j + 1) as f64;
+        }
+        result[i] = ws / weight_sum;
+    }
+    result
+}
+
 /// Wilder EMA (alpha = 1/period), SMA-seeded from the first valid index. NaN warm-up.
 /// NaN inputs after the seed carry the previous value forward.
 pub fn ema_wilder(data: &[f64], period: usize) -> Vec<f64> {
@@ -555,6 +573,36 @@ pub fn flip(primary: &[bool], secondary: &[bool]) -> Vec<bool> {
     result
 }
 
+/// valuewhen: value of `array` when `expr` (nonzero == true) was true the n-th most
+/// recent time. Mirrors the legacy kernel, including its 1000-entry lookback cap.
+pub fn valuewhen(expr: &[f64], array: &[f64], n: usize) -> Vec<f64> {
+    let length = expr.len();
+    let mut result = nan_vec(length);
+    if n == 0 {
+        return result;
+    }
+    let max_lookback = std::cmp::min(1000, length);
+    let mut idx = vec![0usize; max_lookback.max(1)];
+    let mut count = 0usize;
+    for i in 0..length {
+        if expr[i] != 0.0 {
+            if count >= max_lookback {
+                for j in 0..max_lookback - 1 {
+                    idx[j] = idx[j + 1];
+                }
+                idx[max_lookback - 1] = i;
+            } else {
+                idx[count] = i;
+                count += 1;
+            }
+        }
+        if count >= n {
+            result[i] = array[idx[count - n]];
+        }
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -666,6 +714,29 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn wma_weights() {
+        let d = [1.0, 2.0, 3.0, 4.0];
+        let r = wma(&d, 3);
+        assert!(r[0].is_nan() && r[1].is_nan());
+        // (1*1 + 2*2 + 3*3)/6 = 14/6
+        approx(r[2], 14.0 / 6.0);
+        // (2*1 + 3*2 + 4*3)/6 = 20/6
+        approx(r[3], 20.0 / 6.0);
+    }
+
+    #[test]
+    fn valuewhen_recent() {
+        let expr = [0.0, 1.0, 0.0, 1.0, 0.0];
+        let arr = [10.0, 11.0, 12.0, 13.0, 14.0];
+        let r = valuewhen(&expr, &arr, 1);
+        assert!(r[0].is_nan());
+        approx(r[1], 11.0);
+        approx(r[2], 11.0);
+        approx(r[3], 13.0);
+        approx(r[4], 13.0);
     }
 
     #[test]
