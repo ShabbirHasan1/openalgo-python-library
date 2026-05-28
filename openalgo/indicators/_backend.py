@@ -298,6 +298,114 @@ def trima(data, period):
     return out
 
 
+def ema_wilder(data, period):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.ema_wilder(data, period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period:
+        return out
+    out[period - 1] = data[:period].sum() / period
+    for i in range(period, n):
+        v = data[i]
+        out[i] = out[i - 1] if np.isnan(v) else (out[i - 1] * (period - 1) + v) / period
+    return out
+
+
+def alma(data, period, offset, sigma):
+    data = _f(data)
+    if HAVE_RUST:
+        return _rs.alma(data, int(period), float(offset), float(sigma))
+    n = data.size
+    out = np.full(n, np.nan)
+    period = int(period)
+    if period <= 0 or n < period:
+        return out
+    m = offset * (period - 1)
+    s = period / sigma
+    w = np.exp(-((np.arange(period) - m) ** 2) / (2 * s * s))
+    w = w / w.sum()
+    for i in range(period - 1, n):
+        out[i] = float(np.dot(w, data[i - period + 1:i + 1]))
+    return out
+
+
+def mcginley(data, period):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.mcginley(data, period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period:
+        return out
+    out[period - 1] = data[:period].sum() / period
+    for i in range(period, n):
+        if out[i - 1] != 0:
+            ratio = data[i] / out[i - 1]
+            out[i] = out[i - 1] + (data[i] - out[i - 1]) / (period * ratio ** 4)
+        else:
+            out[i] = data[i]
+    return out
+
+
+def vidya(data, period, alpha):
+    data = _f(data)
+    period = int(period)
+    if HAVE_RUST:
+        return _rs.vidya(data, period, float(alpha))
+    n = data.size
+    out = np.full(n, np.nan)
+    if period <= 0 or n < period + 1:
+        return out
+    cmo = np.full(n, np.nan)
+    for i in range(period, n):
+        g = ls = 0.0
+        for j in range(i - period + 1, i + 1):
+            if j > 0:
+                diff = data[j] - data[j - 1]
+                if diff > 0:
+                    g += diff
+                elif diff < 0:
+                    ls += -diff
+        cmo[i] = 100 * (g - ls) / (g + ls) if (g + ls) != 0 else 0.0
+    out[period] = data[period]
+    for i in range(period + 1, n):
+        sc = alpha * abs(cmo[i]) / 100
+        out[i] = out[i - 1] + sc * (data[i] - out[i - 1])
+    return out
+
+
+def _shift(arr, k):
+    out = np.full(len(arr), np.nan)
+    if 0 <= k < len(arr):
+        out[k:] = arr[:len(arr) - k]
+    return out
+
+
+def alligator(data, jaw_p, jaw_s, teeth_p, teeth_s, lips_p, lips_s):
+    data = _f(data)
+    jaw = _shift(ema_wilder(data, jaw_p), int(jaw_s))
+    teeth = _shift(ema_wilder(data, teeth_p), int(teeth_s))
+    lips = _shift(ema_wilder(data, lips_p), int(lips_s))
+    return jaw, teeth, lips
+
+
+def ma_envelopes(data, period, percentage, ma_type):
+    data = _f(data)
+    period = int(period)
+    if ma_type.upper() == "SMA":
+        ma = _roll(data, period, np.mean)
+    elif ma_type.upper() == "EMA":
+        ma = ema(data, period)
+    else:
+        raise ValueError(f"Unsupported MA type: {ma_type}")
+    mult = percentage / 100
+    return ma * (1 + mult), ma, ma * (1 - mult)
+
+
 def _roll(data, period, fn):
     """Rolling reduction for numpy fallbacks (NaN warm-up)."""
     n = data.size

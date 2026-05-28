@@ -130,6 +130,33 @@ fn vwma<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (data, period, offset, sigma))]
+fn alma<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    period: usize,
+    offset: f64,
+    sigma: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let out = oa_core::alma(data.as_slice()?, period, offset, sigma);
+    Ok(out.into_pyarray_bound(py).unbind())
+}
+
+wrap_period!(mcginley, oa_core::mcginley);
+
+#[pyfunction]
+#[pyo3(signature = (data, period, alpha))]
+fn vidya<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    period: usize,
+    alpha: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    let out = oa_core::vidya(data.as_slice()?, period, alpha);
+    Ok(out.into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
 #[pyo3(signature = (data, length, fast_length, slow_length))]
 fn kama_tv<'py>(
     py: Python<'py>,
@@ -247,6 +274,9 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(vwma, m)?)?;
     m.add_function(wrap_pyfunction!(kama, m)?)?;
     m.add_function(wrap_pyfunction!(kama_tv, m)?)?;
+    m.add_function(wrap_pyfunction!(alma, m)?)?;
+    m.add_function(wrap_pyfunction!(mcginley, m)?)?;
+    m.add_function(wrap_pyfunction!(vidya, m)?)?;
     m.add_function(wrap_pyfunction!(crossover, m)?)?;
     m.add_function(wrap_pyfunction!(crossunder, m)?)?;
     m.add_function(wrap_pyfunction!(cross, m)?)?;

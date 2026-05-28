@@ -441,6 +441,96 @@ pub fn kama(data: &[f64], period: usize, fast_sc: f64, slow_sc: f64) -> Vec<f64>
     result
 }
 
+/// Arnaud Legoux MA: Gaussian-weighted window. m = offset*(period-1), s = period/sigma.
+pub fn alma(data: &[f64], period: usize, offset: f64, sigma: f64) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if period == 0 || n < period {
+        return result;
+    }
+    let m = offset * (period as f64 - 1.0);
+    let s = period as f64 / sigma;
+    let mut weights = vec![0.0f64; period];
+    for (i, w) in weights.iter_mut().enumerate() {
+        *w = (-((i as f64 - m).powi(2)) / (2.0 * s * s)).exp();
+    }
+    let wsum: f64 = weights.iter().sum();
+    for w in weights.iter_mut() {
+        *w /= wsum;
+    }
+    for i in period - 1..n {
+        let mut acc = 0.0;
+        for j in 0..period {
+            acc += weights[j] * data[i - period + 1 + j];
+        }
+        result[i] = acc;
+    }
+    result
+}
+
+/// McGinley Dynamic. Seed = mean(first period); MD += (src-MD)/(period*(src/MD)^4).
+pub fn mcginley(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if period == 0 || n < period {
+        return result;
+    }
+    let mut s = 0.0;
+    for &x in data.iter().take(period) {
+        s += x;
+    }
+    result[period - 1] = s / period as f64;
+    for i in period..n {
+        if result[i - 1] != 0.0 {
+            let ratio = data[i] / result[i - 1];
+            let factor = period as f64 * ratio.powi(4);
+            result[i] = result[i - 1] + (data[i] - result[i - 1]) / factor;
+        } else {
+            result[i] = data[i];
+        }
+    }
+    result
+}
+
+/// VIDYA: CMO-scaled EMA. Inline CMO over `period`; seed result[period]=data[period].
+pub fn vidya(data: &[f64], period: usize, alpha: f64) -> Vec<f64> {
+    let n = data.len();
+    let mut result = nan_vec(n);
+    if period == 0 || n < period + 1 {
+        return result;
+    }
+    let mut cmo = nan_vec(n);
+    for i in period..n {
+        let mut gains = 0.0;
+        let mut losses = 0.0;
+        for j in i - period + 1..i + 1 {
+            if j > 0 {
+                let diff = data[j] - data[j - 1];
+                if diff > 0.0 {
+                    gains += diff;
+                } else if diff < 0.0 {
+                    losses += -diff;
+                }
+            }
+        }
+        cmo[i] = if gains + losses != 0.0 {
+            100.0 * (gains - losses) / (gains + losses)
+        } else {
+            0.0
+        };
+    }
+    result[period] = data[period];
+    for i in period + 1..n {
+        if !cmo[i].is_nan() {
+            let sc = alpha * cmo[i].abs() / 100.0;
+            result[i] = result[i - 1] + sc * (data[i] - result[i - 1]);
+        } else {
+            result[i] = result[i - 1];
+        }
+    }
+    result
+}
+
 /// KAMA (TradingView variant). er = |chg(length)| / sum(|chg(1)|, length); each bar
 /// recomputes the volatility window. prev = src when first/NaN (nz). Matches the
 /// `_calculate_kama_tv` reference bit-for-bit.
@@ -902,6 +992,30 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn vidya_seed() {
+        let d = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+        let r = vidya(&d, 3, 0.2);
+        assert!(r[2].is_nan());
+        approx(r[3], d[3]); // seeded with data[period]
+    }
+
+    #[test]
+    fn mcginley_seed_is_sma() {
+        let d = [2.0, 4.0, 6.0, 8.0, 10.0];
+        let r = mcginley(&d, 3);
+        approx(r[2], 4.0); // mean(2,4,6)
+        assert!(!r[3].is_nan());
+    }
+
+    #[test]
+    fn alma_finite_window() {
+        let d: Vec<f64> = (1..=30).map(|x| x as f64).collect();
+        let r = alma(&d, 9, 0.85, 6.0);
+        assert!(r[7].is_nan());
+        assert!(r[8].is_finite());
     }
 
     #[test]

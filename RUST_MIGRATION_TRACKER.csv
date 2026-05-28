@@ -16,17 +16,17 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 15,Trend,Hull MA,ta.hma,HMA,trend.py,close,period,series,—,No,Medium,2,Migrated; parity PASS,1e-12 rel,WMA composite + sqrt period
 16,Trend,Volume Weighted MA,ta.vwma,VWMA,trend.py,"close,volume",period,series,—,No,Low,2,Migrated; parity PASS,1e-12 rel,SMA(price*vol)/SMA(vol)
 17,Trend,Zero-Lag EMA,ta.zlema,ZLEMA,trend.py,close,period,series,—,Yes,Low,2,Migrated; parity PASS,1e-12 rel,EMA of de-lagged price
-18,Trend,Arnaud Legoux MA,ta.alma,ALMA,trend.py,close,"period,offset,sigma",series,—,No,Medium,2,Not Started,1e-12 rel,Gaussian-weighted window
+18,Trend,Arnaud Legoux MA,ta.alma,ALMA,trend.py,close,"period,offset,sigma",series,—,No,Medium,2,Migrated; parity PASS,1e-12 rel,Gaussian-weighted window
 19,Trend,T3 MA,ta.t3,T3,trend.py,close,"period,v_factor",series,T3,Yes,Medium,2,Migrated; parity PASS,1e-12 rel,6x cascaded EMA (GD)
 20,Trend,Supertrend,ta.supertrend,Supertrend,trend.py,"high,low,close","period,multiplier","supertrend,direction",—,Yes,High,3,Not Started,bit-exact,Stateful band-flip logic; ATR-based
 21,Trend,Ichimoku Cloud,ta.ichimoku,Ichimoku,trend.py,"high,low,close","conversion,base,span2,displacement","conv,base,spanA,spanB,lagging",—,No,High,3,Not Started,bit-exact,Multi-line; forward/back displacement
 22,Trend,Kaufman Adaptive MA,ta.kama,KAMA,trend.py,close,"length,fast,slow",series,KAMA,Yes,High,3,Migrated; parity PASS,1e-12 rel,Adaptive efficiency-ratio recursion
 23,Trend,Fractal Adaptive MA,ta.frama,FRAMA,trend.py,"high,low",period,series,—,Yes,High,3,Not Started,1e-12 rel,Fractal-dimension adaptive alpha
-24,Trend,McGinley Dynamic,ta.mcginley,McGinley,trend.py,close,period,series,—,Yes,Medium,3,Not Started,1e-12 rel,Self-adjusting recursion
-25,Trend,Variable Index Dynamic Avg,ta.vidya,VIDYA,trend.py,close,"period,alpha",series,—,Yes,High,3,Not Started,1e-12 rel,CMO-driven adaptive EMA
+24,Trend,McGinley Dynamic,ta.mcginley,McGinley,trend.py,close,period,series,—,Yes,Medium,3,Migrated; parity PASS,1e-12 rel,Self-adjusting recursion
+25,Trend,Variable Index Dynamic Avg,ta.vidya,VIDYA,trend.py,close,"period,alpha",series,—,Yes,High,3,Migrated; parity PASS,1e-12 rel,CMO-driven adaptive EMA
 26,Trend,Chande Kroll Stop,ta.ckstop,ChandeKrollStop,trend.py,"high,low,close","p,x,q","long_stop,short_stop",—,Yes,High,3,Not Started,bit-exact,ATR stop with rolling extremes
-27,Trend,Alligator,ta.alligator,Alligator,trend.py,close,jaw/teeth/lips periods+shifts,"jaw,teeth,lips",—,Yes,Medium,3,Not Started,1e-12 rel,Shifted SMMA lines
-28,Trend,MA Envelopes,ta.ma_envelopes,MovingAverageEnvelopes,trend.py,close,"period,percentage,ma_type","upper,basis,lower",—,No,Medium,3,Not Started,1e-12 rel,MA +/- percent bands
+27,Trend,Alligator,ta.alligator,Alligator,trend.py,close,jaw/teeth/lips periods+shifts,"jaw,teeth,lips",—,Yes,Medium,3,Migrated; parity PASS,1e-12 rel,Shifted SMMA lines
+28,Trend,MA Envelopes,ta.ma_envelopes,MovingAverageEnvelopes,trend.py,close,"period,percentage,ma_type","upper,basis,lower",—,No,Medium,3,Migrated; parity PASS,1e-12 rel,MA +/- percent bands
 29,Momentum,Relative Strength Index,ta.rsi,RSI,momentum.py,close,period,series,RSI,Yes,Low,2,Migrated; parity PASS,1e-12 rel,RMA of gains/losses
 30,Momentum,MACD,ta.macd,MACD,momentum.py,close,"fast,slow,signal","macd,signal,hist",MACD,Yes,Low,2,Migrated; parity PASS,1e-12 rel,EMA difference + signal EMA
 31,Momentum,Stochastic,ta.stochastic,Stochastic,momentum.py,"high,low,close","k_period,smooth_k,d_period","k,d",STOCH,No,Medium,2,Migrated; parity PASS,1e-12 rel,Rolling hi/lo + SMA smoothing

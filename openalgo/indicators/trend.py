@@ -738,7 +738,7 @@ class ALMA(BaseIndicator):
         if sigma <= 0:
             raise ValueError(f"Sigma must be positive, got {sigma}")
         
-        result = self._calculate_alma(validated_data, period, offset, sigma)
+        result = _backend.alma(validated_data, period, offset, sigma)
         return self.format_output(result, input_type, index)
 
 
@@ -1361,7 +1361,7 @@ class McGinley(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_mcginley(validated_data, period)
+        result = _backend.mcginley(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1466,7 +1466,7 @@ class VIDYA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period + 1, len(validated_data))
-        result = self._calculate_vidya(validated_data, period, alpha)
+        result = _backend.vidya(validated_data, period, alpha)
         return self.format_output(result, input_type, index)
 
 
@@ -1545,17 +1545,8 @@ class Alligator(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Calculate SMMA for each line
-        jaw_smma = self._calculate_smma(validated_data, jaw_period)
-        teeth_smma = self._calculate_smma(validated_data, teeth_period)
-        lips_smma = self._calculate_smma(validated_data, lips_period)
-        
-        # Apply shifts
-        jaw = self._shift_series(jaw_smma, jaw_shift)
-        teeth = self._shift_series(teeth_smma, teeth_shift)
-        lips = self._shift_series(lips_smma, lips_shift)
-        
-        results = (jaw, teeth, lips)
+        results = _backend.alligator(validated_data, jaw_period, jaw_shift,
+                                     teeth_period, teeth_shift, lips_period, lips_shift)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -1624,18 +1615,5 @@ class MovingAverageEnvelopes(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Calculate moving average
-        if ma_type.upper() == "SMA":
-            ma = self._calculate_sma(validated_data, period)
-        elif ma_type.upper() == "EMA":
-            ma = self._calculate_ema(validated_data, period)
-        else:
-            raise ValueError(f"Unsupported MA type: {ma_type}")
-        
-        # Calculate envelopes
-        multiplier = percentage / 100
-        upper_envelope = ma * (1 + multiplier)
-        lower_envelope = ma * (1 - multiplier)
-        
-        results = (upper_envelope, ma, lower_envelope)
+        results = _backend.ma_envelopes(validated_data, period, percentage, ma_type)
         return self.format_multiple_outputs(results, input_type, index)

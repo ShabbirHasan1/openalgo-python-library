@@ -19,7 +19,8 @@ import pandas as pd
 
 from openalgo.indicators import _backend as b
 from openalgo.indicators import utils as u
-from openalgo.indicators.trend import KAMA, ZLEMA, T3, TRIMA
+from openalgo.indicators.trend import (KAMA, ZLEMA, T3, TRIMA, ALMA, McGinley, VIDYA,
+                                        Alligator, MovingAverageEnvelopes)
 from openalgo import ta
 
 DATA = Path(__file__).resolve().parent / "data"
@@ -55,6 +56,23 @@ def main():
     t3ref = T3._calculate_gd(gd2, 21, 0.7)
     cmp("t3(21,0.7)", b.t3(c, 21, 0.7), t3ref)
     cmp("trima(20)", b.trima(c, 20), TRIMA._calculate_trima(c, 20))
+
+    # ALMA/McGinley use exp/pow -> recursive/transcendental tolerance
+    cmp("alma(21)", b.alma(c, 21, 0.85, 6.0), ALMA._calculate_alma(c, 21, 0.85, 6.0), tol=1e-9)
+    cmp("mcginley(14)", b.mcginley(c, 14), McGinley._calculate_mcginley(c, 14), tol=1e-9)
+    cmp("vidya(14)", b.vidya(c, 14, 0.2), VIDYA._calculate_vidya(c, 14, 0.2), tol=1e-9)
+    # Alligator/MA-Envelopes compose bit-exact kernels
+    jr, tr, lr = (Alligator._shift_series(Alligator._calculate_smma(c, p), s)
+                  for p, s in [(13, 8), (8, 5), (5, 3)])
+    aj, at_, al = b.alligator(c, 13, 8, 8, 5, 5, 3)
+    cmp("alligator.jaw", aj, jr)
+    cmp("alligator.teeth", at_, tr)
+    cmp("alligator.lips", al, lr)
+    me = MovingAverageEnvelopes()
+    up_r = me._calculate_sma(c, 20) * (1 + 2.5 / 100)
+    mu, mm, ml = b.ma_envelopes(c, 20, 2.5, "SMA")
+    cmp("ma_env.upper", mu, up_r)
+    cmp("ma_env.mid", mm, me._calculate_sma(c, 20))
 
     # Compositions of bit-exact ema/wma: reference rebuilt with utils.ema/wma logic
     cmp("dema(20)", ta.dema(c, 20), _dema_ref(c, 20))
