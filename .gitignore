@@ -188,3 +188,4 @@ target/
 
 # Keep the migration tracker (data CSVs stay ignored)
 !RUST_MIGRATION_TRACKER.csv
+*.pyd

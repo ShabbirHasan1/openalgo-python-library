@@ -43,19 +43,31 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
 ```
 
 ## Phases (see RUST_MIGRATION_TRACKER.csv for the full per-indicator list)
-- **Phase 0 — Foundation** [IN PROGRESS]
+- **Phase 0 — Foundation** [DONE]
   - [x] Branch, toolchain check, data harness, real CSVs fetched.
   - [x] `oa_core` primitives ported + unit-tested (11/11 green):
         sma, rolling_sum, rolling_variance, stdev, ema, ema_wilder, true_range,
         atr_wilder, atr_sma, change, roc, highest, lowest, vwma, cmo, kama,
         ulcer_index, crossover, crossunder, cross, rising, falling, exrem, flip.
-  - [ ] `oa_py` PyO3 crate (cdylib `openalgo._oaindicators`) exposing the kernels.
-  - [ ] maturin wiring in pyproject.toml (mixed Python/Rust, python-source=".",
-        module-name="openalgo._oaindicators"); keep setuptools build working until
-        the extension is proven, then switch backend.
-  - [ ] `benchmark/parity.py`: load CSV -> compare oa_core (via _oaindicators) vs
-        TA-Lib vs Python-ref for every ported kernel. Gate: all within tolerance.
+  - [x] `oa_py` PyO3 crate (cdylib `openalgo._oaindicators`) exposing all 24 kernels.
+        Built with pyo3 0.22 + numpy 0.22, abi3-py39. Python 3.14 needs
+        `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1` at build time.
+  - [x] `benchmark/parity.py`: ALL HARD GATES PASS on RELIANCE/SBIN D+1m — Rust ==
+        Python reference (max diff 0.0; a few at ~1e-13, well under atol=1e-12/
+        rtol=1e-9). TA-Lib cross-check matches for sma/stdev/sum/var/roc/highest/
+        lowest/true_range; ema/atr/cmo differ only by documented convention.
   - [ ] valuewhen kernel (port + test) — deferred from primitive batch.
+
+  LOCAL BUILD METHOD (until maturin/CI phase): from rust/ run
+  `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build --release -p oa_py`
+  then copy `rust/target/release/_oaindicators.dll` -> `openalgo/_oaindicators.pyd`.
+  (`*.pyd` is gitignored; the built artifact is never committed.)
+  maturin/pyproject packaging is intentionally deferred to Phase 4 to avoid
+  disrupting the live setuptools build mid-migration.
+
+  NOTE: kernels are parity-verified but the Python indicator CLASSES still call the
+  numba kernels. Swapping each wrapper to `_oaindicators` is Phase 3 (that is when a
+  tracker row becomes truly "done" = public `ta.*` output unchanged, numba gone).
 - **Phase 1 — Simple indicators** (RSI, MACD, ATR, BBands, ADX, Stochastic, CCI, ...)
 - **Phase 2 — Complex/stateful** (Supertrend, SAR, Ichimoku, KAMA-MA, VIDYA, FRAMA,
   ZigZag, VWAP, Fisher, STC, Connors RSI, ...)
@@ -73,5 +85,13 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   NaN mask, identical length. Record pass/fail + timing into the tracker + a report.
 
 ## Next action for the loop
-Build `rust/oa_py` (PyO3) + maturin config, `maturin develop`, then write and run
-`benchmark/parity.py` for the Phase-0 primitives against TA-Lib + Python reference.
+Phase 0 complete. Next: begin the Phase-1 kernel build-out AND prove the wrapper-swap
+pattern end to end on one trivial indicator. Concretely:
+  1. Read trend.py SMA/EMA/WMA classes; port WMA + add `valuewhen` to oa_core (+tests).
+  2. Pick SMA: rewrite the SMA class `calculate` to call `_oaindicators.sma` (keeping
+     the exact public signature / pd.Series-in-Series-out behavior), with a pure-numpy
+     fallback if the extension is missing. Run the existing openalgo SMA test to prove
+     `ta.sma(...)` output is byte-identical. This validates the swap pattern before
+     scaling it to all indicators.
+  3. Extend parity.py with WMA; rebuild extension; re-run the gate.
+Then add Phase-1 indicator kernels (RSI, MACD, BBands, ATR, Stochastic, CCI, ...).

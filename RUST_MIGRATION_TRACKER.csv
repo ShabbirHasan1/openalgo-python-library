@@ -1,14 +1,14 @@
 ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_Lib_Reference,Recursive_Stateful,Complexity,Phase,Status,Parity_Target,Notes
-1,Primitive,Simple Moving Average,ta.sma,SMA,trend.py,close,period,series,SMA,No,Low,1,Not Started,bit-exact,Core building block; rolling mean
-2,Primitive,Exponential Moving Average,ta.ema,EMA,trend.py,close,period,series,EMA,Yes,Low,1,Not Started,1e-12 rel,Recursive; SMA-seeded; building block
+1,Primitive,Simple Moving Average,ta.sma,SMA,trend.py,close,period,series,SMA,No,Low,1,Kernel parity PASS,bit-exact,Core building block; rolling mean
+2,Primitive,Exponential Moving Average,ta.ema,EMA,trend.py,close,period,series,EMA,Yes,Low,1,Kernel parity PASS,1e-12 rel,Recursive; SMA-seeded; building block
 3,Primitive,Weighted Moving Average,ta.wma,WMA,trend.py,close,period,series,WMA,No,Low,1,Not Started,bit-exact,Linear-weighted window; building block
-4,Primitive,Wilder RMA / SMMA,(internal),utils_ema,utils.py,series,period,series,—,Yes,Low,1,Not Started,1e-12 rel,RMA smoothing used by RSI/ATR/ADX
-5,Primitive,Rolling Std Dev,(internal),stdev,utils.py,series,period,series,STDDEV,No,Low,1,Not Started,1e-12 rel,Used by BBands/Keltner/HV
-6,Primitive,True Range,ta.true_range,TRANGE,volatility.py,"high,low,close",—,series,TRANGE,No,Low,1,Not Started,bit-exact,Building block for ATR/NATR/DMI
-7,Primitive,Highest,ta.highest,(util),utils.py,series,period,series,MAX,No,Low,1,Not Started,bit-exact,Rolling max; Donchian/Stoch/Aroon dep
-8,Primitive,Lowest,ta.lowest,(util),utils.py,series,period,series,MIN,No,Low,1,Not Started,bit-exact,Rolling min
-9,Primitive,Change,ta.change,(util),utils.py,"series,length",—,series,—,No,Low,1,Not Started,bit-exact,n-period difference
-10,Primitive,Rate of Change,ta.roc,ROC,oscillators.py,close,period,series,ROC,No,Low,1,Not Started,1e-12 rel,Percent change over period
+4,Primitive,Wilder RMA / SMMA,(internal),utils_ema,utils.py,series,period,series,—,Yes,Low,1,Kernel parity PASS,1e-12 rel,RMA smoothing used by RSI/ATR/ADX
+5,Primitive,Rolling Std Dev,(internal),stdev,utils.py,series,period,series,STDDEV,No,Low,1,Kernel parity PASS,1e-12 rel,Used by BBands/Keltner/HV
+6,Primitive,True Range,ta.true_range,TRANGE,volatility.py,"high,low,close",—,series,TRANGE,No,Low,1,Kernel parity PASS,bit-exact,Building block for ATR/NATR/DMI
+7,Primitive,Highest,ta.highest,(util),utils.py,series,period,series,MAX,No,Low,1,Kernel parity PASS,bit-exact,Rolling max; Donchian/Stoch/Aroon dep
+8,Primitive,Lowest,ta.lowest,(util),utils.py,series,period,series,MIN,No,Low,1,Kernel parity PASS,bit-exact,Rolling min
+9,Primitive,Change,ta.change,(util),utils.py,"series,length",—,series,—,No,Low,1,Kernel parity PASS,bit-exact,n-period difference
+10,Primitive,Rate of Change,ta.roc,ROC,oscillators.py,close,period,series,ROC,No,Low,1,Kernel parity PASS,1e-12 rel,Percent change over period
 11,Primitive,Rolling Median,ta.median,MEDIAN,statistics.py,close,period,series,—,No,Low,1,Not Started,bit-exact,MedianBands dependency
 12,Trend,Double EMA,ta.dema,DEMA,trend.py,close,period,series,DEMA,Yes,Low,2,Not Started,1e-12 rel,2*EMA - EMA(EMA)
 13,Trend,Triple EMA,ta.tema,TEMA,trend.py,close,period,series,TEMA,Yes,Low,2,Not Started,1e-12 rel,Composite of EMA
@@ -25,7 +25,7 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 24,Trend,McGinley Dynamic,ta.mcginley,McGinley,trend.py,close,period,series,—,Yes,Medium,3,Not Started,1e-12 rel,Self-adjusting recursion
 25,Trend,Variable Index Dynamic Avg,ta.vidya,VIDYA,trend.py,close,"period,alpha",series,—,Yes,High,3,Not Started,1e-12 rel,CMO-driven adaptive EMA
 26,Trend,Chande Kroll Stop,ta.ckstop,ChandeKrollStop,trend.py,"high,low,close","p,x,q","long_stop,short_stop",—,Yes,High,3,Not Started,bit-exact,ATR stop with rolling extremes
-27,Trend,Alligator,ta.alligator,Alligator,trend.py,close,"jaw/teeth/lips periods+shifts","jaw,teeth,lips",—,Yes,Medium,3,Not Started,1e-12 rel,Shifted SMMA lines
+27,Trend,Alligator,ta.alligator,Alligator,trend.py,close,jaw/teeth/lips periods+shifts,"jaw,teeth,lips",—,Yes,Medium,3,Not Started,1e-12 rel,Shifted SMMA lines
 28,Trend,MA Envelopes,ta.ma_envelopes,MovingAverageEnvelopes,trend.py,close,"period,percentage,ma_type","upper,basis,lower",—,No,Medium,3,Not Started,1e-12 rel,MA +/- percent bands
 29,Momentum,Relative Strength Index,ta.rsi,RSI,momentum.py,close,period,series,RSI,Yes,Low,2,Not Started,1e-12 rel,RMA of gains/losses
 30,Momentum,MACD,ta.macd,MACD,momentum.py,close,"fast,slow,signal","macd,signal,hist",MACD,Yes,Low,2,Not Started,1e-12 rel,EMA difference + signal EMA
@@ -88,7 +88,7 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 86,Statistics,Linear Reg Slope,ta.lrslope,LRSLOPE,statistics.py,close,"period,interval",series,LINEARREG_SLOPE,No,Medium,2,Not Started,1e-12 rel,Rolling regression slope
 87,Statistics,Correlation,ta.correlation,CORREL,statistics.py,"data1,data2",period,series,CORREL,No,Medium,2,Not Started,1e-12 rel,Rolling Pearson r
 88,Statistics,Beta,ta.beta,BETA,statistics.py,"asset,market",period,series,BETA,No,Medium,2,Not Started,1e-12 rel,Rolling covariance/variance
-89,Statistics,Variance,ta.variance,VAR,statistics.py,close,"lookback,mode,ema_period,...","var or components",VAR,Yes,High,2,Not Started,1e-12 rel,PR/LR variance + zscore filter
+89,Statistics,Variance,ta.variance,VAR,statistics.py,close,"lookback,mode,ema_period,...",var or components,VAR,Yes,High,2,Not Started,1e-12 rel,PR/LR variance + zscore filter
 90,Statistics,Time Series Forecast,ta.tsf,TSF,statistics.py,close,period,series,TSF,No,Medium,2,Not Started,1e-12 rel,Linreg endpoint+slope projection
 91,Statistics,Median Bands,ta.median_bands,MedianBands,statistics.py,"high,low,close","median_length,atr_length,atr_mult","mid,upper,lower,ema",—,Yes,Medium,3,Not Started,1e-12 rel,Rolling median +/- ATR
 92,Statistics,Mode,ta.mode,MODE,statistics.py,close,"period,bins",series,—,No,High,3,Not Started,1e-9 rel,Histogram-binned rolling mode
@@ -100,11 +100,11 @@ ID,Category,Indicator,Public_API,Class,Source_File,Inputs,Parameters,Outputs,TA_
 98,Hybrid,Williams Fractals,ta.fractals,WilliamsFractals,hybrid.py,"high,low",periods,"up,down",—,No,Medium,3,Not Started,bit-exact,Lookahead local extrema
 99,Hybrid,Random Walk Index,ta.rwi,RWI,hybrid.py,"high,low,close",period,"rwi_high,rwi_low",—,No,Medium,3,Not Started,1e-12 rel,Range vs ATR*sqrt(n)
 100,Hybrid,ZigZag,(internal),ZigZag,hybrid.py,"high,low",deviation,series,—,Yes,High,3,Not Started,bit-exact,Not in public ta.* API; pivot-based
-101,Utility,Crossover,ta.crossover,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Not Started,bit-exact,Boolean cross-up detect
-102,Utility,Crossunder,ta.crossunder,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Not Started,bit-exact,Boolean cross-down detect
-103,Utility,Cross,(util),cross,utils.py,"series1,series2",—,bool series,—,No,Low,1,Not Started,bit-exact,Either-direction cross
-104,Utility,Rising,(util),rising,utils.py,series,length,bool series,—,No,Low,1,Not Started,bit-exact,Monotonic up over length
-105,Utility,Falling,(util),falling,utils.py,series,length,bool series,—,No,Low,1,Not Started,bit-exact,Monotonic down over length
-106,Utility,ExRem,(util),exrem,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Not Started,bit-exact,Remove excess signals (AFL)
-107,Utility,Flip,(util),flip,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Not Started,bit-exact,Toggle/latch signal (AFL)
+101,Utility,Crossover,ta.crossover,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Boolean cross-up detect
+102,Utility,Crossunder,ta.crossunder,(util),utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Boolean cross-down detect
+103,Utility,Cross,(util),cross,utils.py,"series1,series2",—,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Either-direction cross
+104,Utility,Rising,(util),rising,utils.py,series,length,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Monotonic up over length
+105,Utility,Falling,(util),falling,utils.py,series,length,bool series,—,No,Low,1,Kernel parity PASS,bit-exact,Monotonic down over length
+106,Utility,ExRem,(util),exrem,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Kernel parity PASS,bit-exact,Remove excess signals (AFL)
+107,Utility,Flip,(util),flip,utils.py,"primary,secondary",—,bool series,—,Yes,Low,1,Kernel parity PASS,bit-exact,Toggle/latch signal (AFL)
 108,Utility,ValueWhen,(util),valuewhen,utils.py,"condition,source,occurrence",—,series,—,Yes,Medium,1,Not Started,bit-exact,Value at Nth prior true
