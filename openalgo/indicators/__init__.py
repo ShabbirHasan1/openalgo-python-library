@@ -28,9 +28,11 @@ from .oscillators import (CMO, TRIX, UO, AO, AC, PPO, PO, DPO, AROONOSC,
 from .statistics import (LINREG, LRSLOPE, CORREL, BETA, VAR, TSF, MEDIAN, MODE, MedianBands)
 from .hybrid import (ADX, Aroon, PivotPoints, SAR, DMI,
                     WilliamsFractals, RWI)
-from .utils import (crossover, crossunder, highest, lowest, change, roc, 
+from .utils import (crossover, crossunder, highest, lowest, change, roc,
                    sma as utils_sma, ema as utils_ema, stdev, validate_input,
                    exrem, flip, valuewhen, rising, falling, cross)
+from .talib_extra import (MOM, ROCP, ROCR, ROCR100, MIDPOINT, APO,
+                          MEDPRICE, TYPPRICE, WCLPRICE, MIDPRICE, AVGPRICE)
 
 
 class TechnicalAnalysis:
@@ -161,6 +163,19 @@ class TechnicalAnalysis:
         self._median_bands = MedianBands()
         self._mode = MODE()
         
+        # TA-Lib-compatible additions
+        self._mom = MOM()
+        self._rocp = ROCP()
+        self._rocr = ROCR()
+        self._rocr100 = ROCR100()
+        self._midpoint = MIDPOINT()
+        self._apo = APO()
+        self._medprice = MEDPRICE()
+        self._typprice = TYPPRICE()
+        self._wclprice = WCLPRICE()
+        self._midprice = MIDPRICE()
+        self._avgprice = AVGPRICE()
+
         # Hybrid indicators
         self._adx = ADX()
         self._aroon = Aroon()
@@ -1257,6 +1272,52 @@ class TechnicalAnalysis:
         return self._gator_oscillator.calculate(high, low, jaw_period, teeth_period, lips_period) if hasattr(self, '_gator_oscillator') else None
         
     
+    # =================== TA-LIB-COMPATIBLE ADDITIONS ===================
+
+    def mom(self, data, period: int = 10):
+        """Momentum (TA-Lib MOM): data - data[period]."""
+        return self._mom.calculate(data, period)
+
+    def rocp(self, data, period: int = 10):
+        """Rate of Change Percentage (TA-Lib ROCP): (price-prev)/prev."""
+        return self._rocp.calculate(data, period)
+
+    def rocr(self, data, period: int = 10):
+        """Rate of Change Ratio (TA-Lib ROCR): price/prev."""
+        return self._rocr.calculate(data, period)
+
+    def rocr100(self, data, period: int = 10):
+        """Rate of Change Ratio 100 scale (TA-Lib ROCR100): price/prev*100."""
+        return self._rocr100.calculate(data, period)
+
+    def midpoint(self, data, period: int = 14):
+        """MidPoint over period (TA-Lib MIDPOINT): (max+min)/2 of the source."""
+        return self._midpoint.calculate(data, period)
+
+    def midprice(self, high, low, period: int = 14):
+        """Midpoint Price over period (TA-Lib MIDPRICE): (highest(high)+lowest(low))/2."""
+        return self._midprice.calculate(high, low, period)
+
+    def apo(self, data, fast_period: int = 12, slow_period: int = 26, ma_type: str = "SMA"):
+        """Absolute Price Oscillator (TA-Lib APO): MA(fast) - MA(slow)."""
+        return self._apo.calculate(data, fast_period, slow_period, ma_type)
+
+    def avgprice(self, open_prices, high, low, close):
+        """Average Price (TA-Lib AVGPRICE): (open+high+low+close)/4."""
+        return self._avgprice.calculate(open_prices, high, low, close)
+
+    def medprice(self, high, low):
+        """Median Price (TA-Lib MEDPRICE): (high+low)/2."""
+        return self._medprice.calculate(high, low)
+
+    def typprice(self, high, low, close):
+        """Typical Price (TA-Lib TYPPRICE): (high+low+close)/3."""
+        return self._typprice.calculate(high, low, close)
+
+    def wclprice(self, high, low, close):
+        """Weighted Close Price (TA-Lib WCLPRICE): (high+low+2*close)/4."""
+        return self._wclprice.calculate(high, low, close)
+
     # =================== UTILITY FUNCTIONS ===================
     
     def crossover(self, series1: Union[np.ndarray, pd.Series, list], 

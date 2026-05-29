@@ -1326,6 +1326,81 @@ def vwma_strict(values, volume, length):
     return out
 
 
+# ---------------------------------------------------------------------------
+# TA-Lib-compatible additions (new indicators; match TA-Lib exactly by definition)
+# ---------------------------------------------------------------------------
+
+def avgprice(open_, high, low, close):
+    return (_f(open_) + _f(high) + _f(low) + _f(close)) / 4.0
+
+
+def medprice(high, low):
+    return (_f(high) + _f(low)) / 2.0
+
+
+def typprice(high, low, close):
+    return (_f(high) + _f(low) + _f(close)) / 3.0
+
+
+def wclprice(high, low, close):
+    return (_f(high) + _f(low) + 2.0 * _f(close)) / 4.0
+
+
+def midpoint(data, period):
+    data = _f(data)
+    return (highest(data, int(period)) + lowest(data, int(period))) / 2.0
+
+
+def midprice(high, low, period):
+    return (highest(_f(high), int(period)) + lowest(_f(low), int(period))) / 2.0
+
+
+def mom(data, period):
+    """Momentum = data - data[period] (TA-Lib MOM)."""
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period < n:
+        out[period:] = data[period:] - data[:-period]
+    return out
+
+
+def rocp(data, period):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period < n:
+        prev = data[:-period]
+        with np.errstate(invalid="ignore", divide="ignore"):
+            out[period:] = (data[period:] - prev) / prev
+    return out
+
+
+def rocr(data, period):
+    data = _f(data)
+    period = int(period)
+    n = data.size
+    out = np.full(n, np.nan)
+    if period < n:
+        with np.errstate(invalid="ignore", divide="ignore"):
+            out[period:] = data[period:] / data[:-period]
+    return out
+
+
+def rocr100(data, period):
+    return rocr(data, period) * 100.0
+
+
+def apo(data, fast_period, slow_period, ma_type):
+    """Absolute Price Oscillator = MA(fast) - MA(slow) (TA-Lib APO; matype SMA/EMA)."""
+    data = _f(data)
+    if ma_type.upper() == "EMA":
+        return ema(data, int(fast_period)) - ema(data, int(slow_period))
+    return _win_mean(data, int(fast_period)) - _win_mean(data, int(slow_period))
+
+
 def nvi(close, volume):
     close, volume = _f(close), _f(volume)
     n = close.size
