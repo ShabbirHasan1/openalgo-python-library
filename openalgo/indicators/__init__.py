@@ -1493,7 +1493,8 @@ class TechnicalAnalysis:
             Array of standard deviation values
         """
         data = validate_input(data)
-        return stdev(data, period)
+        from . import _backend
+        return _backend.stdev(data, period)
     
     def exrem(self, primary: Union[np.ndarray, pd.Series, list], 
               secondary: Union[np.ndarray, pd.Series, list]) -> np.ndarray:
