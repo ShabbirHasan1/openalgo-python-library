@@ -2199,6 +2199,51 @@ pub fn valuewhen(expr: &[f64], array: &[f64], n: usize) -> Vec<f64> {
     result
 }
 
+/// T3 (Tillson) = gd(gd(gd(data))), gd(x) = (1+v)*EMA(x) - v*EMA(EMA(x)). Computed
+/// entirely in Rust (6 EMA passes, no per-stage numpy temps / PyO3 round-trips).
+pub fn t3(data: &[f64], period: usize, v: f64) -> Vec<f64> {
+    fn gd(x: &[f64], period: usize, v: f64) -> Vec<f64> {
+        let e1 = ema(x, period);
+        let e2 = ema(&e1, period);
+        let mut out = vec![0.0f64; x.len()];
+        for i in 0..x.len() {
+            out[i] = (1.0 + v) * e1[i] - v * e2[i];
+        }
+        out
+    }
+    let g1 = gd(data, period, v);
+    let g2 = gd(&g1, period, v);
+    gd(&g2, period, v)
+}
+
+/// MIDPRICE = (highest(high,period) + lowest(low,period)) / 2, fused single pass.
+pub fn midprice(high: &[f64], low: &[f64], period: usize) -> Vec<f64> {
+    let hi = _roll_extreme(high, period, true);
+    let lo = _roll_extreme(low, period, false);
+    let n = high.len();
+    let mut out = nan_vec(n);
+    for i in 0..n {
+        if !hi[i].is_nan() {
+            out[i] = (hi[i] + lo[i]) / 2.0;
+        }
+    }
+    out
+}
+
+/// MIDPOINT = (highest(data,period) + lowest(data,period)) / 2 over one series.
+pub fn midpoint(data: &[f64], period: usize) -> Vec<f64> {
+    let hi = _roll_extreme(data, period, true);
+    let lo = _roll_extreme(data, period, false);
+    let n = data.len();
+    let mut out = nan_vec(n);
+    for i in 0..n {
+        if !hi[i].is_nan() {
+            out[i] = (hi[i] + lo[i]) / 2.0;
+        }
+    }
+    out
+}
+
 /// Ultimate Oscillator, single pass. Maintains the three buying-pressure and
 /// true-range rolling sums simultaneously (no intermediate arrays / round-trips).
 /// out = 100*(4*r1 + 2*r2 + r3)/7, r = sum(bp)/sum(tr); NaN before max(p1,p2,p3)-1.

@@ -63,6 +63,18 @@ first `period-1` DMs, then `dm = dm - dm/period + todayDM`), which is why they m
 TA-Lib bit-for-bit and are kept separate from `ta.adx`/`ta.atr` (those follow
 TradingView). Parity vs TA-Lib: all <=1e-12 on RELIANCE daily.
 
+## Performance vs TA-Lib
+The Rust core is benchmarked head-to-head with TA-Lib on 924,782 NIFTY 1-min bars
+(`benchmark/talib_perf_compare.py` -> `benchmark/TALIB_PERF_COMPARE.md`). All
+`ta.*` are O(n); the linreg family (`linreg`/`tsf`/`linregangle`/`linregintercept`),
+`stddev`, `cci` and `macd` run faster than TA-Lib. Where TA-Lib is still ahead the
+gap is fixed Python FFI/wrapper overhead on small per-call work (price transforms,
+single-array ops), inherent multi-pass cost (`t3` = 6 EMAs), or a deliberate
+correctness choice (`correl` keeps a numerically stable two-pass; TA-Lib's faster
+CORREL is unstable and can return values outside [-1, 1]). Recent O(n) conversions:
+stddev 590->3ms, lrslope 136->6ms, beta 66->9ms, aroon 49->20ms, ultosc 40->11ms,
+adx 42->18ms, trima/wma now match TA-Lib's running-sum result exactly.
+
 ## Coverage gap (TA-Lib functions OpenAlgo does not yet have)
 Vector math (ADD/SUB/COS/LN/...) and operators (MAX/MIN/SUM - available as
 ta.highest/lowest and the rolling-sum util) are excluded as non-indicators.

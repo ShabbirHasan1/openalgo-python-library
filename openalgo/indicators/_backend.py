@@ -245,6 +245,8 @@ def zlema(data, period):
 def t3(data, period, v_factor):
     data = _f(data)
     period = int(period)
+    if HAVE_RUST:
+        return _rs.t3(data, period, float(v_factor))
 
     def gd(x):
         e1 = ema(x, period)
@@ -1350,11 +1352,16 @@ def wclprice(high, low, close):
 
 def midpoint(data, period):
     data = _f(data)
+    if HAVE_RUST:
+        return _rs.midpoint(data, int(period))
     return (highest(data, int(period)) + lowest(data, int(period))) / 2.0
 
 
 def midprice(high, low, period):
-    return (highest(_f(high), int(period)) + lowest(_f(low), int(period))) / 2.0
+    high, low = _f(high), _f(low)
+    if HAVE_RUST:
+        return _rs.midprice(high, low, int(period))
+    return (highest(high, int(period)) + lowest(low, int(period))) / 2.0
 
 
 def mom(data, period):

@@ -223,6 +223,38 @@ fn adxr_talib<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (data, period, v_factor))]
+fn t3<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    period: usize,
+    v_factor: f64,
+) -> PyResult<Py<PyArray1<f64>>> {
+    Ok(oa_core::t3(data.as_slice()?, period, v_factor).into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
+#[pyo3(signature = (high, low, period))]
+fn midprice<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    period: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    Ok(oa_core::midprice(high.as_slice()?, low.as_slice()?, period).into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
+#[pyo3(signature = (data, period))]
+fn midpoint<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    period: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    Ok(oa_core::midpoint(data.as_slice()?, period).into_pyarray_bound(py).unbind())
+}
+
+#[pyfunction]
 #[pyo3(signature = (high, low, close, period1, period2, period3))]
 fn ultosc<'py>(
     py: Python<'py>,
@@ -754,6 +786,9 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(stochf, m)?)?;
     m.add_function(wrap_pyfunction!(ultosc, m)?)?;
     m.add_function(wrap_pyfunction!(adosc, m)?)?;
+    m.add_function(wrap_pyfunction!(t3, m)?)?;
+    m.add_function(wrap_pyfunction!(midprice, m)?)?;
+    m.add_function(wrap_pyfunction!(midpoint, m)?)?;
     m.add_function(wrap_pyfunction!(lrslope, m)?)?;
     m.add_function(wrap_pyfunction!(correl, m)?)?;
     m.add_function(wrap_pyfunction!(beta, m)?)?;

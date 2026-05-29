@@ -268,3 +268,23 @@ O(n*period) per-window kernels into O(n) rolling accumulators.
   is cancellation-prone at price^2 scale; needs careful tolerance). Also investigate
   the benchmark's correlation max|d|=1.0 New-vs-Old (degenerate flat-window: 0.0 vs
   perfect-corr). Then refresh benchmark/FULL_BENCHMARK.md with the new numbers.
+
+## Performance pass P2 (kernel-level, TALIB_PERF_COMPARE.md driven)
+- Fast rolling min/max: VecDeque -> preallocated power-of-two ring buffer
+  (_roll_extreme). ~13% faster; helps williams_r/stochastic/stochf/midprice. Exact.
+- aroon/aroon_oscillator: O(n*period) -> O(n) index-tracking deques (earliest-extreme
+  tie-break to match reference). 49->20ms / 50->21ms. Exact (0.0).
+- beta: O(n*period) -> O(n) rolling moments on returns. 66->9ms. <=1.3e-14.
+- correl: KEPT stable two-pass (rolling one-pass drifts ~1.0 on collinear price
+  data). Documented that TA-Lib CORREL is unstable (returns >1 in flat windows).
+- ultosc: single-pass Rust kernel (3 fused rolling sums). 40->11ms. Exact (0.0).
+- adosc (cho): single-pass AD + 2 EMAs Rust kernel. 22->13ms. Exact (0.0).
+- adx: fused true_range/+DM/-DM + 3 Wilder smooths into one pass (scalars). 42->18ms.
+  Exact (0.0). Also speeds dmi.
+- t3: in-Rust 6-EMA kernel (no per-stage numpy temps/round-trips). 23->13ms. Exact.
+- midprice/midpoint: fused Rust kernels (one round-trip). ~marginal (deque-bound).
+- stdev: was pure-Python utils.stdev loop (590ms) -> _backend.stdev Rust. 590->3ms.
+REMAINING gaps are irreducible: fixed Python FFI/wrapper overhead on small/elementwise
+ops (price transforms, mom/roc/bop), inherent multi-pass (t3 6 EMAs), per-window sort
+(mode 99ms), or deliberate correctness (correl). Linreg family + stddev + cci + macd
+now BEAT TA-Lib. Nothing pushed.
