@@ -300,67 +300,53 @@ pub fn roc(data: &[f64], length: usize) -> Vec<f64> {
 // Rolling extrema (monotonic deque, O(n))
 // ============================================================================
 
-/// Rolling maximum over `period`. NaN for the first `period-1` slots.
-pub fn highest(data: &[f64], period: usize) -> Vec<f64> {
+/// Monotonic-deque rolling extremum over `period`, O(n). `want_max` selects max vs
+/// min. The deque of indices lives in a small power-of-two ring buffer (capacity
+/// >= period), indexed by masked monotonic head/tail counters - no heap alloc per
+/// op, no modulo, cache-resident. `want_max` is loop-invariant (predicted perfectly).
+#[inline]
+fn _roll_extreme(data: &[f64], period: usize, want_max: bool) -> Vec<f64> {
     let n = data.len();
     let mut result = nan_vec(n);
     if period == 0 {
         return result;
     }
-    // monotonic decreasing deque of indices
-    let mut dq: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
+    let cap = period.next_power_of_two();
+    let mask = cap - 1;
+    let mut ring: Vec<usize> = vec![0usize; cap];
+    let mut head = 0usize; // front counter
+    let mut tail = 0usize; // back counter (len = tail - head)
     for i in 0..n {
-        while let Some(&front) = dq.front() {
-            if front + period <= i {
-                dq.pop_front();
+        if head < tail && ring[head & mask] + period <= i {
+            head += 1;
+        }
+        let x = data[i];
+        while tail > head {
+            let b = ring[(tail - 1) & mask];
+            let drop = if want_max { data[b] <= x } else { data[b] >= x };
+            if drop {
+                tail -= 1;
             } else {
                 break;
             }
         }
-        while let Some(&back) = dq.back() {
-            if data[back] <= data[i] {
-                dq.pop_back();
-            } else {
-                break;
-            }
-        }
-        dq.push_back(i);
+        ring[tail & mask] = i;
+        tail += 1;
         if i + 1 >= period {
-            result[i] = data[*dq.front().unwrap()];
+            result[i] = data[ring[head & mask]];
         }
     }
     result
 }
 
+/// Rolling maximum over `period`. NaN for the first `period-1` slots.
+pub fn highest(data: &[f64], period: usize) -> Vec<f64> {
+    _roll_extreme(data, period, true)
+}
+
 /// Rolling minimum over `period`. NaN for the first `period-1` slots.
 pub fn lowest(data: &[f64], period: usize) -> Vec<f64> {
-    let n = data.len();
-    let mut result = nan_vec(n);
-    if period == 0 {
-        return result;
-    }
-    let mut dq: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
-    for i in 0..n {
-        while let Some(&front) = dq.front() {
-            if front + period <= i {
-                dq.pop_front();
-            } else {
-                break;
-            }
-        }
-        while let Some(&back) = dq.back() {
-            if data[back] >= data[i] {
-                dq.pop_back();
-            } else {
-                break;
-            }
-        }
-        dq.push_back(i);
-        if i + 1 >= period {
-            result[i] = data[*dq.front().unwrap()];
-        }
-    }
-    result
+    _roll_extreme(data, period, false)
 }
 
 // ============================================================================
@@ -1726,20 +1712,39 @@ pub fn aroon(high: &[f64], low: &[f64], period: usize) -> (Vec<f64>, Vec<f64>) {
         return (up, down);
     }
     let p = period as f64;
-    for i in lookback - 1..n {
-        let ws = i + 1 - lookback;
-        let mut hp = 0usize;
-        let mut lp = 0usize;
-        for j in 0..lookback {
-            if high[ws + j] > high[ws + hp] {
-                hp = j;
-            }
-            if low[ws + j] < low[ws + lp] {
-                lp = j;
-            }
+    // O(n): two monotonic deques tracking the absolute INDEX of the rolling max(high)
+    // and min(low) over `lookback` bars. Strict comparisons on back-pop keep the
+    // EARLIEST extreme at the front, matching the reference's first-occurrence tie
+    // break (periods-since-extreme = i - front_index = lookback-1-position).
+    let cap = lookback.next_power_of_two();
+    let mask = cap - 1;
+    let mut hr: Vec<usize> = vec![0usize; cap]; // high max-deque (decreasing)
+    let mut lr: Vec<usize> = vec![0usize; cap]; // low  min-deque (increasing)
+    let (mut hh, mut ht) = (0usize, 0usize);
+    let (mut lh, mut lt) = (0usize, 0usize);
+    for i in 0..n {
+        if hh < ht && hr[hh & mask] + lookback <= i {
+            hh += 1;
         }
-        up[i] = 100.0 * (p - (lookback - 1 - hp) as f64) / p;
-        down[i] = 100.0 * (p - (lookback - 1 - lp) as f64) / p;
+        if lh < lt && lr[lh & mask] + lookback <= i {
+            lh += 1;
+        }
+        let hx = high[i];
+        while ht > hh && high[hr[(ht - 1) & mask]] < hx {
+            ht -= 1;
+        }
+        hr[ht & mask] = i;
+        ht += 1;
+        let lx = low[i];
+        while lt > lh && low[lr[(lt - 1) & mask]] > lx {
+            lt -= 1;
+        }
+        lr[lt & mask] = i;
+        lt += 1;
+        if i + 1 >= lookback {
+            up[i] = 100.0 * (p - (i - hr[hh & mask]) as f64) / p;
+            down[i] = 100.0 * (p - (i - lr[lh & mask]) as f64) / p;
+        }
     }
     (up, down)
 }
