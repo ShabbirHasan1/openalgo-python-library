@@ -223,6 +223,45 @@ fn adxr_talib<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (high, low, close, period1, period2, period3))]
+fn ultosc<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    close: PyReadonlyArray1<'py, f64>,
+    period1: usize,
+    period2: usize,
+    period3: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    Ok(oa_core::ultosc(high.as_slice()?, low.as_slice()?, close.as_slice()?, period1, period2, period3)
+        .into_pyarray_bound(py)
+        .unbind())
+}
+
+#[pyfunction]
+#[pyo3(signature = (high, low, close, volume, fast, slow))]
+fn adosc<'py>(
+    py: Python<'py>,
+    high: PyReadonlyArray1<'py, f64>,
+    low: PyReadonlyArray1<'py, f64>,
+    close: PyReadonlyArray1<'py, f64>,
+    volume: PyReadonlyArray1<'py, f64>,
+    fast: usize,
+    slow: usize,
+) -> PyResult<Py<PyArray1<f64>>> {
+    Ok(oa_core::adosc(
+        high.as_slice()?,
+        low.as_slice()?,
+        close.as_slice()?,
+        volume.as_slice()?,
+        fast,
+        slow,
+    )
+    .into_pyarray_bound(py)
+    .unbind())
+}
+
+#[pyfunction]
 #[pyo3(signature = (high, low, close, fastk_period, fastd_period))]
 fn stochf<'py>(
     py: Python<'py>,
@@ -713,6 +752,8 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(adx_talib, m)?)?;
     m.add_function(wrap_pyfunction!(adxr_talib, m)?)?;
     m.add_function(wrap_pyfunction!(stochf, m)?)?;
+    m.add_function(wrap_pyfunction!(ultosc, m)?)?;
+    m.add_function(wrap_pyfunction!(adosc, m)?)?;
     m.add_function(wrap_pyfunction!(lrslope, m)?)?;
     m.add_function(wrap_pyfunction!(correl, m)?)?;
     m.add_function(wrap_pyfunction!(beta, m)?)?;

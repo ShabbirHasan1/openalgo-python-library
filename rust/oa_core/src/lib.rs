@@ -2170,6 +2170,91 @@ pub fn valuewhen(expr: &[f64], array: &[f64], n: usize) -> Vec<f64> {
     result
 }
 
+/// Ultimate Oscillator, single pass. Maintains the three buying-pressure and
+/// true-range rolling sums simultaneously (no intermediate arrays / round-trips).
+/// out = 100*(4*r1 + 2*r2 + r3)/7, r = sum(bp)/sum(tr); NaN before max(p1,p2,p3)-1.
+pub fn ultosc(
+    high: &[f64],
+    low: &[f64],
+    close: &[f64],
+    p1: usize,
+    p2: usize,
+    p3: usize,
+) -> Vec<f64> {
+    let n = close.len();
+    let mut out = nan_vec(n);
+    let mp = p1.max(p2).max(p3);
+    if n == 0 || mp == 0 || n < mp {
+        return out;
+    }
+    let tr = true_range(high, low, close);
+    let mut bp = vec![0.0f64; n];
+    bp[0] = close[0] - low[0].min(close[0]);
+    for i in 1..n {
+        bp[i] = close[i] - low[i].min(close[i - 1]);
+    }
+    let (mut b1, mut t1, mut b2, mut t2, mut b3, mut t3) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    for i in 0..n {
+        b1 += bp[i];
+        t1 += tr[i];
+        b2 += bp[i];
+        t2 += tr[i];
+        b3 += bp[i];
+        t3 += tr[i];
+        if i >= p1 {
+            b1 -= bp[i - p1];
+            t1 -= tr[i - p1];
+        }
+        if i >= p2 {
+            b2 -= bp[i - p2];
+            t2 -= tr[i - p2];
+        }
+        if i >= p3 {
+            b3 -= bp[i - p3];
+            t3 -= tr[i - p3];
+        }
+        if i + 1 >= mp {
+            let r1 = if t1 > 0.0 { b1 / t1 } else { 0.0 };
+            let r2 = if t2 > 0.0 { b2 / t2 } else { 0.0 };
+            let r3 = if t3 > 0.0 { b3 / t3 } else { 0.0 };
+            out[i] = 100.0 * (4.0 * r1 + 2.0 * r2 + r3) / 7.0;
+        }
+    }
+    out
+}
+
+/// Chaikin A/D Oscillator (TA-Lib ADOSC) = EMA(AD, fast) - EMA(AD, slow), where AD
+/// is the cumulative accumulation/distribution line. Single-pass AD, then two EMAs.
+pub fn adosc(
+    high: &[f64],
+    low: &[f64],
+    close: &[f64],
+    volume: &[f64],
+    fast: usize,
+    slow: usize,
+) -> Vec<f64> {
+    let n = close.len();
+    let mut ad = vec![0.0f64; n];
+    let mut acc = 0.0;
+    for i in 0..n {
+        let rng = high[i] - low[i];
+        let clv = if rng != 0.0 {
+            ((close[i] - low[i]) - (high[i] - close[i])) / rng
+        } else {
+            0.0
+        };
+        acc += clv * volume[i];
+        ad[i] = acc;
+    }
+    let ef = ema(&ad, fast);
+    let es = ema(&ad, slow);
+    let mut out = vec![0.0f64; n];
+    for i in 0..n {
+        out[i] = ef[i] - es[i];
+    }
+    out
+}
+
 // ---------------------------------------------------------------------------
 // TA-Lib-faithful directional-movement family (exact TA-Lib seeding/smoothing).
 // These intentionally replicate TA-Lib (NOT OpenAlgo's TradingView-seeded adx).

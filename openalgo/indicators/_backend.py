@@ -1178,6 +1178,8 @@ def stochrsi(data, rsi_period, stoch_period, k_period, d_period):
 
 def cho(high, low, close, volume, fast_period, slow_period):
     high, low, close, volume = _f(high), _f(low), _f(close), _f(volume)
+    if HAVE_RUST:
+        return _rs.adosc(high, low, close, volume, int(fast_period), int(slow_period))
     rng = high - low
     with np.errstate(invalid="ignore", divide="ignore"):
         clv = np.where(rng != 0, ((close - low) - (high - close)) / np.where(rng == 0, 1.0, rng), 0.0)
@@ -1877,6 +1879,8 @@ def rvi_volatility(data, stdev_period, rsi_period):
 
 def ultosc(high, low, close, period1, period2, period3):
     high, low, close = _f(high), _f(low), _f(close)
+    if HAVE_RUST:
+        return _rs.ultosc(high, low, close, int(period1), int(period2), int(period3))
     n = close.size
     tr = true_range(high, low, close)
     bp = np.empty(n)
