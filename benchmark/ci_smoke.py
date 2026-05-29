@@ -6,7 +6,14 @@ imported, and a few representative indicators produce correct, finite output.
 """
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Use the in-repo build only when the source tree actually contains the compiled
+# extension (local dev copies `_oaindicators` into ./openalgo/). In CI the extension
+# is not committed, so fall through to the installed wheel - the artifact we ship -
+# instead of shadowing it with an extension-less source package.
+_root = Path(__file__).resolve().parent.parent
+if list((_root / "openalgo").glob("_oaindicators*")):
+    sys.path.insert(0, str(_root))
 
 import numpy as np
 import pandas as pd
