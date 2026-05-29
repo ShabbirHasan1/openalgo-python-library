@@ -169,9 +169,11 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
   parity gates from bit-exact to tol=1e-9 and document).
   - [x] Batch 1 (statistics regressions): linreg, tsf, lrslope, correl, beta -> Rust.
         ~360x-810x vs old interpreted; on par with TA-Lib. statistics_parity green (tol).
-  - [ ] Batch 2: add Rust `win_mean`/`win_std` (per-window) kernels and route
-        _backend._win_mean/_win_std through them -> instantly speeds up dpo, po,
-        awesome/accel osc, kst, starc, chandelier_exit, emv, rvol, bbpercent, bbwidth, hv.
+  - [x] Batch 2: Rust win_mean/win_std (per-window) kernels; _backend._win_mean/
+        _win_std route through them (cargo 37). Massive wins: bbpercent 42.9->0.13ms,
+        bbwidth 43.4->0.12, hv 31.7->0.08, starc 23.3->0.04, awesome 23.3->0.07,
+        accel 34.4->0.08, kst 57.6->0.15, rvol ~200x, chandelier 0.11. Affected parity
+        gates relaxed to tol=1e-9 (~1e-14 rust-vs-numpy-pairwise); all green.
   - [ ] Batch 3 (bespoke loops): aroon, aroon_osc, williams_fractals, mode, median,
         stc (_stoch_single), coppock (_wma_nan), rvi_vigor, adx DI/DX loop, rwi.
   - [ ] Re-run ALL parity gates + the NIFTY 924k full benchmark; refresh FULL_BENCHMARK.md.

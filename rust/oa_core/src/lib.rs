@@ -1424,6 +1424,66 @@ fn _xstats(period: usize) -> (f64, f64) {
     (sx, sx2)
 }
 
+/// Per-window mean (naive sum / period). NaN if the window contains any NaN.
+/// Matches `_win_mean` (np.mean over each window) within ~1e-14.
+pub fn win_mean(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut out = nan_vec(n);
+    if period == 0 || n < period {
+        return out;
+    }
+    let p = period as f64;
+    for i in period - 1..n {
+        let w = &data[i - period + 1..i + 1];
+        let mut s = 0.0;
+        let mut nan = false;
+        for &v in w {
+            if v.is_nan() {
+                nan = true;
+                break;
+            }
+            s += v;
+        }
+        if !nan {
+            out[i] = s / p;
+        }
+    }
+    out
+}
+
+/// Per-window population std = sqrt(mean((w-mean)^2)). NaN if the window has any NaN.
+pub fn win_std(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut out = nan_vec(n);
+    if period == 0 || n < period {
+        return out;
+    }
+    let p = period as f64;
+    for i in period - 1..n {
+        let w = &data[i - period + 1..i + 1];
+        let mut s = 0.0;
+        let mut nan = false;
+        for &v in w {
+            if v.is_nan() {
+                nan = true;
+                break;
+            }
+            s += v;
+        }
+        if nan {
+            continue;
+        }
+        let m = s / p;
+        let mut acc = 0.0;
+        for &v in w {
+            let d = v - m;
+            acc += d * d;
+        }
+        out[i] = (acc / p).sqrt();
+    }
+    out
+}
+
 /// Rolling linear-regression endpoint value (slope*(period-1)+intercept).
 pub fn linreg(data: &[f64], period: usize) -> Vec<f64> {
     let n = data.len();
@@ -1688,6 +1748,16 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn win_mean_std_basic() {
+        let d = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+        let m = win_mean(&d, 8);
+        approx(m[7], 5.0);
+        let s = win_std(&d, 8);
+        approx(s[7], 2.0); // population std
+        assert!(m[6].is_nan() && s[6].is_nan());
     }
 
     #[test]

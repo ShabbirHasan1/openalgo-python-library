@@ -47,7 +47,7 @@ def main():
     cmp("mfi", b.mfi(h, lo, c, v, 14), MFI._calculate_mfi(h, lo, c, v, 14))
 
     raw_emv = EMV._calculate_emv_raw(h, lo, v, 10000.0)
-    cmp("emv", b.emv(h, lo, v, 14, 10000), EMV._calculate_sma(raw_emv, 14))
+    cmp("emv", b.emv(h, lo, v, 14, 10000), EMV._calculate_sma(raw_emv, 14), tol=1e-9)
 
     raw_fi = FI._calculate_raw_fi(c, v)
     cmp("force_index", b.force_index(c, v, 13), FI._calculate_ema(raw_fi, 13))

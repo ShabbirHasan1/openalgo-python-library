@@ -39,6 +39,8 @@ wrap_period!(roc, oa_core::roc);
 wrap_period!(cmo, oa_core::cmo);
 wrap_period!(ulcer_index, oa_core::ulcer_index);
 wrap_period!(rsi, oa_core::rsi);
+wrap_period!(win_mean, oa_core::win_mean);
+wrap_period!(win_std, oa_core::win_std);
 wrap_period!(linreg, oa_core::linreg);
 wrap_period!(tsf, oa_core::tsf);
 
@@ -489,6 +491,8 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cmo, m)?)?;
     m.add_function(wrap_pyfunction!(ulcer_index, m)?)?;
     m.add_function(wrap_pyfunction!(rsi, m)?)?;
+    m.add_function(wrap_pyfunction!(win_mean, m)?)?;
+    m.add_function(wrap_pyfunction!(win_std, m)?)?;
     m.add_function(wrap_pyfunction!(linreg, m)?)?;
     m.add_function(wrap_pyfunction!(tsf, m)?)?;
     m.add_function(wrap_pyfunction!(lrslope, m)?)?;

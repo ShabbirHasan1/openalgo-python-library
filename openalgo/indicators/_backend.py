@@ -1386,11 +1386,18 @@ def rvol(volume, period):
 
 
 def _win_mean(data, period):
+    data = _f(data)
+    if HAVE_RUST:
+        return _rs.win_mean(data, int(period))
     return _roll(data, int(period), np.mean)
 
 
 def _win_std(data, period):
     """Per-window population std; NaN if the window contains any NaN (TV ta.stdev)."""
+    data = _f(data)
+    if HAVE_RUST:
+        return _rs.win_std(data, int(period))
+
     def f(w):
         if np.isnan(w).any():
             return np.nan

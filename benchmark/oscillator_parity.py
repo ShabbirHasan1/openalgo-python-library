@@ -64,7 +64,7 @@ def main():
     cmp("ppo.line", pl, rpl)
     cmp("ppo.signal", sl, rsl)
     cmp("po.sma", b.price_oscillator(c, 10, 20, "SMA"),
-        PO._calculate_sma(c, 10) - PO._calculate_sma(c, 20))
+        PO._calculate_sma(c, 10) - PO._calculate_sma(c, 20), tol=1e-9)
     cmp("po.ema", b.price_oscillator(c, 10, 20, "EMA"),
         PO._calculate_ema(c, 10) - PO._calculate_ema(c, 20))
     cmp("dpo", b.dpo(c, 21, False), _dpo_ref(c, 21))
@@ -83,7 +83,7 @@ def main():
     cmp("rvi.vigor", rk, rrk)
     cmp("rvi.signal", rks, rrks)
     kk, ks = b.kst(c, 10, 15, 20, 30, 10, 10, 10, 15, 9)
-    cmp("kst", kk, _kst_ref(c))
+    cmp("kst", kk, _kst_ref(c), tol=1e-9)
     tk, ts = b.tsi(c, 25, 13, 13)
     cmp("tsi", tk, _tsi_ref(c))
     vp, vm = b.vi(h, lo, c, 14)
