@@ -10,6 +10,7 @@ from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .trend import SMA, EMA, WMA
 from .volatility import BollingerBands
+from . import _backend
 
 
 class OBV(BaseIndicator):
@@ -37,10 +38,12 @@ class OBV(BaseIndicator):
         obv[0] = 0.0
         
         for i in range(1, n):
-            if close[i] < close[i-1]:
+            if close[i] > close[i-1]:
+                sign = 1.0
+            elif close[i] < close[i-1]:
                 sign = -1.0
             else:
-                sign = 1.0
+                sign = 0.0  # flat close contributes 0 (matches TA-Lib / TradingView)
 
             obv[i] = obv[i-1] + (sign * float(volume[i]))
         
@@ -69,7 +72,7 @@ class OBV(BaseIndicator):
         # Align arrays
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_obv(close_data, volume_data)
+        result = _backend.obv(close_data, volume_data)
         return self.format_output(result, input_type, index)
 
 
@@ -202,11 +205,11 @@ class OBVSmoothed(BaseIndicator):
         elif ma_type == "EMA":
             result = self._ema.calculate(obv, ma_length)
         elif ma_type == "SMMA (RMA)":
-            result = self._calculate_rma(obv, ma_length)
+            result = _backend.rma_smma(np.asarray(obv, dtype=np.float64), ma_length)
         elif ma_type == "WMA":
             result = self._wma.calculate(obv, ma_length)
         elif ma_type == "VWMA":
-            result = self._calculate_vwma(obv, volume_data, ma_length)
+            result = _backend.vwma_strict(np.asarray(obv, dtype=np.float64), volume_data, ma_length)
         else:
             raise ValueError(f"Unsupported ma_type: {ma_type}")
         
@@ -420,7 +423,7 @@ class VWAP(BaseIndicator):
             session_starts_array[0] = True
         
         # Calculate VWAP
-        vwap, _ = self._calculate_session_vwap(source, volume_data, session_starts_array)
+        vwap, _ = _backend.session_vwap(source, volume_data, session_starts_array)
         
         return self.format_output(vwap, input_type, index)
     
@@ -502,7 +505,7 @@ class VWAP(BaseIndicator):
             session_starts_array[0] = True
         
         # Calculate VWAP and standard deviation
-        vwap, stdev = self._calculate_session_vwap(source, volume_data, session_starts_array)
+        vwap, stdev = _backend.session_vwap(source, volume_data, session_starts_array)
         
         # Calculate bands
         upper_bands = []
@@ -618,7 +621,7 @@ class MFI(BaseIndicator):
         high_data, low_data, close_data, volume_data = self.align_arrays(high_data, low_data, close_data, volume_data)
         self.validate_period(period, len(close_data))
         
-        result = self._calculate_mfi(high_data, low_data, close_data, volume_data, period)
+        result = _backend.mfi(high_data, low_data, close_data, volume_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -687,7 +690,7 @@ class ADL(BaseIndicator):
         
         high_data, low_data, close_data, volume_data = self.align_arrays(high_data, low_data, close_data, volume_data)
         
-        result = self._calculate_adl(high_data, low_data, close_data, volume_data)
+        result = _backend.adl(high_data, low_data, close_data, volume_data)
         return self.format_output(result, input_type, index)
 
 
@@ -768,7 +771,7 @@ class CMF(BaseIndicator):
         high_data, low_data, close_data, volume_data = self.align_arrays(high_data, low_data, close_data, volume_data)
         self.validate_period(period, len(close_data))
         
-        result = self._calculate_cmf(high_data, low_data, close_data, volume_data, period)
+        result = _backend.cmf(high_data, low_data, close_data, volume_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -862,12 +865,7 @@ class EMV(BaseIndicator):
         if divisor <= 0:
             raise ValueError(f"Divisor must be positive, got {divisor}")
         
-        # Calculate raw EMV values
-        raw_emv = self._calculate_emv_raw(high_data, low_data, volume_data, float(divisor))
-        
-        # Apply SMA smoothing (TradingView always smooths)
-        smoothed_emv = self._calculate_sma(raw_emv, length)
-        
+        smoothed_emv = _backend.emv(high_data, low_data, volume_data, length, divisor)
         return self.format_output(smoothed_emv, input_type, index)
 
 
@@ -962,12 +960,7 @@ class FI(BaseIndicator):
         if cumulative_volume == 0:
             raise ValueError("No volume is provided by the data vendor.")
         
-        # Calculate raw Force Index: volume * change(close)
-        raw_fi = self._calculate_raw_fi(close_data, volume_data)
-        
-        # Apply EMA smoothing (TradingView: ta.ema(raw_fi, length))
-        smoothed_fi = self._calculate_ema(raw_fi, length)
-        
+        smoothed_fi = _backend.force_index(close_data, volume_data, length)
         return self.format_output(smoothed_fi, input_type, index)
 
 
@@ -1064,7 +1057,7 @@ class NVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_nvi(close_data, volume_data)
+        result = _backend.nvi(close_data, volume_data)
         return self.format_output(result, input_type, index)
     
     def calculate_with_ema(self, close: Union[np.ndarray, pd.Series, list],
@@ -1092,12 +1085,8 @@ class NVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        # Calculate NVI
-        nvi = self._calculate_nvi(close_data, volume_data)
-        
-        # Calculate EMA of NVI
-        nvi_ema = self._calculate_ema(nvi, ema_length)
-        
+        nvi = _backend.nvi(close_data, volume_data)
+        nvi_ema = _backend.ema_first_valid(nvi, ema_length)
         results = (nvi, nvi_ema)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1208,7 +1197,7 @@ class PVI(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_pvi(close_data, volume_data, initial_value)
+        result = _backend.pvi(close_data, volume_data, initial_value)
         return self.format_output(result, input_type, index)
     
     def calculate_with_signal(self, close: Union[np.ndarray, pd.Series, list],
@@ -1346,19 +1335,7 @@ class VOLOSC(BaseIndicator):
             if total_volume == 0:
                 raise RuntimeError("No volume is provided by the data vendor.")
         
-        # Calculate EMA moving averages (TradingView uses EMA, not SMA)
-        short_ema = self._calculate_ema_safe(validated_volume, short_length)
-        long_ema = self._calculate_ema_safe(validated_volume, long_length)
-        
-        # Calculate Volume Oscillator using TradingView formula
-        vo = np.full_like(validated_volume, np.nan, dtype=np.float64)
-        for i in range(len(validated_volume)):
-            if not np.isnan(long_ema[i]) and long_ema[i] != 0:
-                # TradingView formula: osc = 100 * (short - long) / long
-                vo[i] = 100.0 * (short_ema[i] - long_ema[i]) / long_ema[i]
-            else:
-                vo[i] = np.nan
-        
+        vo = _backend.volosc(validated_volume, short_length, long_length)
         return self.format_output(vo, input_type, index)
 
 
@@ -1408,7 +1385,7 @@ class VROC(BaseIndicator):
         validated_volume, input_type, index = self.validate_input(volume)
         self.validate_period(period, len(validated_volume))
         
-        result = self._calculate_vroc(validated_volume, period)
+        result = _backend.vroc(validated_volume, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1536,8 +1513,8 @@ class KlingerVolumeOscillator(BaseIndicator):
             if param <= 0:
                 raise ValueError(f"{name} must be positive, got {param}")
         
-        kvo, trigger = self._calculate_kvo_tv(high_data, low_data, close_data, volume_data, trig_len, fast_x, slow_x)
-        
+        kvo, trigger = _backend.kvo(high_data, low_data, close_data, volume_data, trig_len, fast_x, slow_x)
+
         results = (kvo, trigger)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1604,7 +1581,7 @@ class PriceVolumeTrend(BaseIndicator):
         
         close_data, volume_data = self.align_arrays(close_data, volume_data)
         
-        result = self._calculate_pvt(close_data, volume_data)
+        result = _backend.pvt(close_data, volume_data)
         return self.format_output(result, input_type, index)
 
 
@@ -1661,5 +1638,5 @@ class RVOL(BaseIndicator):
         volume_data, input_type, index = self.validate_input(volume)
         self.validate_period(period, len(volume_data))
         
-        result = self._calculate_rvol(volume_data, period)
+        result = _backend.rvol(volume_data, period)
         return self.format_output(result, input_type, index)

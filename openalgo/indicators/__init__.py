@@ -28,9 +28,13 @@ from .oscillators import (CMO, TRIX, UO, AO, AC, PPO, PO, DPO, AROONOSC,
 from .statistics import (LINREG, LRSLOPE, CORREL, BETA, VAR, TSF, MEDIAN, MODE, MedianBands)
 from .hybrid import (ADX, Aroon, PivotPoints, SAR, DMI,
                     WilliamsFractals, RWI)
-from .utils import (crossover, crossunder, highest, lowest, change, roc, 
+from .utils import (crossover, crossunder, highest, lowest, change, roc,
                    sma as utils_sma, ema as utils_ema, stdev, validate_input,
                    exrem, flip, valuewhen, rising, falling, cross)
+from .talib_extra import (MOM, ROCP, ROCR, ROCR100, MIDPOINT, APO,
+                          MEDPRICE, TYPPRICE, WCLPRICE, MIDPRICE, AVGPRICE,
+                          PLUS_DM, MINUS_DM, DX, ADXR, STOCHF,
+                          LINEARREG_ANGLE, LINEARREG_INTERCEPT)
 
 
 class TechnicalAnalysis:
@@ -161,6 +165,26 @@ class TechnicalAnalysis:
         self._median_bands = MedianBands()
         self._mode = MODE()
         
+        # TA-Lib-compatible additions
+        self._mom = MOM()
+        self._rocp = ROCP()
+        self._rocr = ROCR()
+        self._rocr100 = ROCR100()
+        self._midpoint = MIDPOINT()
+        self._apo = APO()
+        self._medprice = MEDPRICE()
+        self._typprice = TYPPRICE()
+        self._wclprice = WCLPRICE()
+        self._midprice = MIDPRICE()
+        self._avgprice = AVGPRICE()
+        self._plus_dm = PLUS_DM()
+        self._minus_dm = MINUS_DM()
+        self._dx = DX()
+        self._adxr = ADXR()
+        self._stochf = STOCHF()
+        self._linregangle = LINEARREG_ANGLE()
+        self._linregintercept = LINEARREG_INTERCEPT()
+
         # Hybrid indicators
         self._adx = ADX()
         self._aroon = Aroon()
@@ -1257,6 +1281,80 @@ class TechnicalAnalysis:
         return self._gator_oscillator.calculate(high, low, jaw_period, teeth_period, lips_period) if hasattr(self, '_gator_oscillator') else None
         
     
+    # =================== TA-LIB-COMPATIBLE ADDITIONS ===================
+
+    def mom(self, data, period: int = 10):
+        """Momentum (TA-Lib MOM): data - data[period]."""
+        return self._mom.calculate(data, period)
+
+    def rocp(self, data, period: int = 10):
+        """Rate of Change Percentage (TA-Lib ROCP): (price-prev)/prev."""
+        return self._rocp.calculate(data, period)
+
+    def rocr(self, data, period: int = 10):
+        """Rate of Change Ratio (TA-Lib ROCR): price/prev."""
+        return self._rocr.calculate(data, period)
+
+    def rocr100(self, data, period: int = 10):
+        """Rate of Change Ratio 100 scale (TA-Lib ROCR100): price/prev*100."""
+        return self._rocr100.calculate(data, period)
+
+    def midpoint(self, data, period: int = 14):
+        """MidPoint over period (TA-Lib MIDPOINT): (max+min)/2 of the source."""
+        return self._midpoint.calculate(data, period)
+
+    def midprice(self, high, low, period: int = 14):
+        """Midpoint Price over period (TA-Lib MIDPRICE): (highest(high)+lowest(low))/2."""
+        return self._midprice.calculate(high, low, period)
+
+    def apo(self, data, fast_period: int = 12, slow_period: int = 26, ma_type: str = "SMA"):
+        """Absolute Price Oscillator (TA-Lib APO): MA(fast) - MA(slow)."""
+        return self._apo.calculate(data, fast_period, slow_period, ma_type)
+
+    def avgprice(self, open_prices, high, low, close):
+        """Average Price (TA-Lib AVGPRICE): (open+high+low+close)/4."""
+        return self._avgprice.calculate(open_prices, high, low, close)
+
+    def medprice(self, high, low):
+        """Median Price (TA-Lib MEDPRICE): (high+low)/2."""
+        return self._medprice.calculate(high, low)
+
+    def typprice(self, high, low, close):
+        """Typical Price (TA-Lib TYPPRICE): (high+low+close)/3."""
+        return self._typprice.calculate(high, low, close)
+
+    def wclprice(self, high, low, close):
+        """Weighted Close Price (TA-Lib WCLPRICE): (high+low+2*close)/4."""
+        return self._wclprice.calculate(high, low, close)
+
+    def plus_dm(self, high, low, period: int = 14):
+        """Plus Directional Movement (TA-Lib PLUS_DM): Wilder-summed +DM."""
+        return self._plus_dm.calculate(high, low, period)
+
+    def minus_dm(self, high, low, period: int = 14):
+        """Minus Directional Movement (TA-Lib MINUS_DM): Wilder-summed -DM."""
+        return self._minus_dm.calculate(high, low, period)
+
+    def dx(self, high, low, close, period: int = 14):
+        """Directional Movement Index (TA-Lib DX): 100*|+DI - -DI|/(+DI + -DI)."""
+        return self._dx.calculate(high, low, close, period)
+
+    def adxr(self, high, low, close, period: int = 14):
+        """Average Directional Movement Rating (TA-Lib ADXR): (ADX + ADX[period-1])/2."""
+        return self._adxr.calculate(high, low, close, period)
+
+    def stochf(self, high, low, close, fastk_period: int = 5, fastd_period: int = 3):
+        """Stochastic Fast (TA-Lib STOCHF): returns (fastk, fastd)."""
+        return self._stochf.calculate(high, low, close, fastk_period, fastd_period)
+
+    def linregangle(self, data, period: int = 14):
+        """Linear Regression Angle (TA-Lib LINEARREG_ANGLE): degrees(atan(slope))."""
+        return self._linregangle.calculate(data, period)
+
+    def linregintercept(self, data, period: int = 14):
+        """Linear Regression Intercept (TA-Lib LINEARREG_INTERCEPT)."""
+        return self._linregintercept.calculate(data, period)
+
     # =================== UTILITY FUNCTIONS ===================
     
     def crossover(self, series1: Union[np.ndarray, pd.Series, list], 
@@ -1375,7 +1473,8 @@ class TechnicalAnalysis:
             Array of ROC values as percentages
         """
         data = validate_input(data)
-        return roc(data, length)
+        from . import _backend
+        return _backend.roc(data, length)
     
     def stdev(self, data: Union[np.ndarray, pd.Series, list], period: int) -> np.ndarray:
         """
@@ -1394,7 +1493,8 @@ class TechnicalAnalysis:
             Array of standard deviation values
         """
         data = validate_input(data)
-        return stdev(data, period)
+        from . import _backend
+        return _backend.stdev(data, period)
     
     def exrem(self, primary: Union[np.ndarray, pd.Series, list], 
               secondary: Union[np.ndarray, pd.Series, list]) -> np.ndarray:
@@ -1557,12 +1657,10 @@ ta = TechnicalAnalysis()
 # the cached bytecode and this function returns in < 1 ms.
 # ------------------------------------------------------------------
 def _warmup():
-    """Pre-compile the most frequently used Numba kernels.
+    """No-op. The Rust core needs no warm-up; kept as a stable symbol only."""
+    return
 
-    With cache=True the compiled code is persisted to disk — subsequent
-    imports just load the cached bytecode and this whole function
-    completes in < 5 ms.
-    """
+    # --- legacy numba pre-compile (dead; retained for reference) ---
     _c = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     _h = _c + 0.5
     _l = _c - 0.5
@@ -1607,7 +1705,13 @@ def _warmup():
     ADX._compute_di_dx(_ew, _ew, _ew, 2)
 
 
-_warmup()
+try:
+    # Warm-up only pre-compiles legacy numba kernels; it is a no-op for the Rust
+    # backend and must never break `import openalgo` (e.g. numba absent or, on
+    # numpy>=2, broken). Migrated indicators do not rely on it.
+    _warmup()
+except Exception:
+    pass
 
 
 # Make indicator classes available for advanced users

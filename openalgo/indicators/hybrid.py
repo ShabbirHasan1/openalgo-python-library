@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import true_range, ema_wilder
+from . import _backend
 
 
 class ADX(BaseIndicator):
@@ -110,20 +111,7 @@ class ADX(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
 
-        # Stage 1 (jitted): compute raw TR, DM+, DM-
-        tr, dm_plus, dm_minus = self._compute_dm(high_data, low_data, close_data)
-
-        # Stage 2: Wilder's smoothing (each call is jitted)
-        sm_atr = ema_wilder(tr, period)
-        sm_dm_plus = ema_wilder(dm_plus, period)
-        sm_dm_minus = ema_wilder(dm_minus, period)
-
-        # Stage 3 (jitted): compute DI+, DI-, DX
-        di_plus, di_minus, dx = self._compute_di_dx(sm_atr, sm_dm_plus, sm_dm_minus, period)
-
-        # Stage 4: ADX = Wilder's smoothing of DX
-        adx = ema_wilder(dx, period)
-
+        di_plus, di_minus, adx = _backend.adx(high_data, low_data, close_data, period)
         return self.format_multiple_outputs((di_plus, di_minus, adx), input_type, index)
 
 
@@ -204,7 +192,7 @@ class Aroon(BaseIndicator):
         high_data, low_data = self.align_arrays(high_data, low_data)
         self.validate_period(period, len(high_data))
         
-        results = self._calculate_aroon(high_data, low_data, period)
+        results = _backend.aroon(high_data, low_data, period)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -282,7 +270,7 @@ class PivotPoints(BaseIndicator):
         
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         
-        results = self._calculate_pivot_points(high_data, low_data, close_data)
+        results = _backend.pivot_points(high_data, low_data, close_data)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -395,7 +383,7 @@ class SAR(BaseIndicator):
         if acceleration > maximum:
             raise ValueError("Acceleration cannot be greater than maximum")
         
-        results = self._calculate_sar(high_data, low_data, acceleration, maximum)
+        results = _backend.sar(high_data, low_data, acceleration, maximum)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -539,7 +527,7 @@ class ZigZag(BaseIndicator):
         
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         
-        result = self._calculate_zigzag(high_data, low_data, close_data, deviation)
+        result = _backend.zigzag(high_data, low_data, close_data, deviation)
         return self.format_output(result, input_type, index)
 
 
@@ -732,8 +720,8 @@ class WilliamsFractals(BaseIndicator):
         if periods < 2:
             raise ValueError(f"Periods must be at least 2, got {periods}")
         
-        fractal_up, fractal_down = self._calculate_fractals_tv(high_data, low_data, periods)
-        
+        fractal_up, fractal_down = _backend.williams_fractals(high_data, low_data, periods)
+
         results = (fractal_up, fractal_down)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -867,7 +855,7 @@ class RWI(BaseIndicator):
         high_data, low_data, close_data = self.align_arrays(high_data, low_data, close_data)
         self.validate_period(period, len(close_data))
         
-        rwi_high, rwi_low = self._calculate_rwi(high_data, low_data, close_data, period)
+        rwi_high, rwi_low = _backend.rwi(high_data, low_data, close_data, period)
         
         results = (rwi_high, rwi_low)
         return self.format_multiple_outputs(results, input_type, index)

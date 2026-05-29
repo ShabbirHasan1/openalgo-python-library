@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import sma, ema, highest, lowest, vwma_optimized, kama_optimized, atr_wilder
+from . import _backend
 
 
 class SMA(BaseIndicator):
@@ -62,7 +63,7 @@ class SMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_sma(validated_data, period)
+        result = _backend.sma(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -99,7 +100,7 @@ class EMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = ema(validated_data, period)
+        result = _backend.ema(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -152,7 +153,7 @@ class WMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_wma(validated_data, period)
+        result = _backend.wma(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -189,7 +190,7 @@ class DEMA(BaseIndicator):
         self.validate_period(period, len(validated_data))
         
         # Calculate first EMA using consolidated utility
-        ema1_data = ema(validated_data, period)
+        ema1_data = _backend.ema(validated_data, period)
         
         # For second EMA, skip NaN values from first EMA
         # Find first valid index in ema1
@@ -200,7 +201,7 @@ class DEMA(BaseIndicator):
         
         # Extract valid portion for second EMA calculation
         valid_ema1 = ema1_data[first_valid:]
-        ema2_partial = ema(valid_ema1, period)
+        ema2_partial = _backend.ema(valid_ema1, period)
         
         # Reconstruct full ema2 array
         ema2_data = np.full_like(validated_data, np.nan)
@@ -247,7 +248,7 @@ class TEMA(BaseIndicator):
         self.validate_period(period, len(validated_data))
         
         # Calculate first EMA
-        ema1_data = ema(validated_data, period)
+        ema1_data = _backend.ema(validated_data, period)
         
         # Calculate second EMA from valid portion of first EMA
         first_valid = period - 1
@@ -256,7 +257,7 @@ class TEMA(BaseIndicator):
             return self.format_output(result, input_type, index)
         
         valid_ema1 = ema1_data[first_valid:]
-        ema2_partial = ema(valid_ema1, period)
+        ema2_partial = _backend.ema(valid_ema1, period)
         
         # Reconstruct full ema2 array
         ema2_data = np.full_like(validated_data, np.nan)
@@ -272,7 +273,7 @@ class TEMA(BaseIndicator):
             # Remove NaN values
             valid_ema2_clean = valid_ema2[~np.isnan(valid_ema2)]
             if len(valid_ema2_clean) >= period:
-                ema3_partial = ema(valid_ema2_clean, period)
+                ema3_partial = _backend.ema(valid_ema2_clean, period)
                 third_valid_start = second_valid_start + period - 1
                 if third_valid_start < len(ema3_data):
                     valid_length = min(len(ema3_partial[period-1:]), len(ema3_data) - third_valid_start)
@@ -440,7 +441,7 @@ class Supertrend(BaseIndicator):
         if multiplier <= 0:
             raise ValueError(f"Multiplier must be positive, got {multiplier}")
         
-        supertrend_result, direction_result = self._calculate_supertrend(high_data, low_data, close_data, period, multiplier)
+        supertrend_result, direction_result = _backend.supertrend(high_data, low_data, close_data, period, multiplier)
         return self.format_multiple_outputs((supertrend_result, direction_result), input_type, index)
 
 
@@ -568,8 +569,8 @@ class Ichimoku(BaseIndicator):
             if period <= 0:
                 raise ValueError(f"{name} must be positive, got {period}")
         
-        results = self._calculate_ichimoku_tv(high_data, low_data, close_data, conversion_periods, 
-                                             base_periods, lagging_span2_periods, displacement)
+        results = _backend.ichimoku(high_data, low_data, close_data, conversion_periods,
+                                    base_periods, lagging_span2_periods, displacement)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -635,8 +636,8 @@ class VWMA(BaseIndicator):
     
     @staticmethod
     def _calculate_vwma(data: np.ndarray, volume: np.ndarray, period: int) -> np.ndarray:
-        """O(n) optimized VWMA calculation using utils"""
-        return vwma_optimized(data, volume, period)
+        """O(n) optimized VWMA calculation using the Rust backend"""
+        return _backend.vwma(data, volume, period)
     
     def calculate(self, data: Union[np.ndarray, pd.Series, list],
                  volume: Union[np.ndarray, pd.Series, list],
@@ -737,7 +738,7 @@ class ALMA(BaseIndicator):
         if sigma <= 0:
             raise ValueError(f"Sigma must be positive, got {sigma}")
         
-        result = self._calculate_alma(validated_data, period, offset, sigma)
+        result = _backend.alma(validated_data, period, offset, sigma)
         return self.format_output(result, input_type, index)
 
 
@@ -840,7 +841,7 @@ class KAMA(BaseIndicator):
         if fast_length >= slow_length:
             raise ValueError("Fast length must be less than slow length")
         
-        result = self._calculate_kama_tv(validated_data, length, fast_length, slow_length)
+        result = _backend.kama_tv(validated_data, length, fast_length, slow_length)
         return self.format_output(result, input_type, index)
 
 
@@ -877,7 +878,7 @@ class ZLEMA(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_zlema_optimized(validated_data, period)
+        result = _backend.zlema(validated_data, period)
         return self.format_output(result, input_type, index)
     
     @staticmethod
@@ -956,11 +957,7 @@ class T3(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Apply GD three times
-        gd1 = self._calculate_gd(validated_data, period, v_factor)
-        gd2 = self._calculate_gd(gd1, period, v_factor)
-        result = self._calculate_gd(gd2, period, v_factor)
-        
+        result = _backend.t3(validated_data, period, v_factor)
         return self.format_output(result, input_type, index)
 
 
@@ -1111,7 +1108,7 @@ class FRAMA(BaseIndicator):
         if period % 2 != 0:
             raise ValueError("Period must be even for FRAMA calculation")
         
-        result = self._calculate_frama_tv(high_data, low_data, period)
+        result = _backend.frama(high_data, low_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1243,8 +1240,8 @@ class ChandeKrollStop(BaseIndicator):
         if x <= 0:
             raise ValueError(f"ATR coefficient (x) must be positive, got {x}")
         
-        long_stop, short_stop = self._calculate_chande_kroll_stop(high_data, low_data, close_data, p, x, q)
-        
+        long_stop, short_stop = _backend.chande_kroll_stop(high_data, low_data, close_data, p, x, q)
+
         results = (long_stop, short_stop)
         return self.format_multiple_outputs(results, input_type, index)
 
@@ -1307,7 +1304,7 @@ class TRIMA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_trima(validated_data, period)
+        result = _backend.trima(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1364,7 +1361,7 @@ class McGinley(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
-        result = self._calculate_mcginley(validated_data, period)
+        result = _backend.mcginley(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -1469,7 +1466,7 @@ class VIDYA(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period + 1, len(validated_data))
-        result = self._calculate_vidya(validated_data, period, alpha)
+        result = _backend.vidya(validated_data, period, alpha)
         return self.format_output(result, input_type, index)
 
 
@@ -1548,17 +1545,8 @@ class Alligator(BaseIndicator):
         """
         validated_data, input_type, index = self.validate_input(data)
         
-        # Calculate SMMA for each line
-        jaw_smma = self._calculate_smma(validated_data, jaw_period)
-        teeth_smma = self._calculate_smma(validated_data, teeth_period)
-        lips_smma = self._calculate_smma(validated_data, lips_period)
-        
-        # Apply shifts
-        jaw = self._shift_series(jaw_smma, jaw_shift)
-        teeth = self._shift_series(teeth_smma, teeth_shift)
-        lips = self._shift_series(lips_smma, lips_shift)
-        
-        results = (jaw, teeth, lips)
+        results = _backend.alligator(validated_data, jaw_period, jaw_shift,
+                                     teeth_period, teeth_shift, lips_period, lips_shift)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -1627,18 +1615,5 @@ class MovingAverageEnvelopes(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        # Calculate moving average
-        if ma_type.upper() == "SMA":
-            ma = self._calculate_sma(validated_data, period)
-        elif ma_type.upper() == "EMA":
-            ma = self._calculate_ema(validated_data, period)
-        else:
-            raise ValueError(f"Unsupported MA type: {ma_type}")
-        
-        # Calculate envelopes
-        multiplier = percentage / 100
-        upper_envelope = ma * (1 + multiplier)
-        lower_envelope = ma * (1 - multiplier)
-        
-        results = (upper_envelope, ma, lower_envelope)
+        results = _backend.ma_envelopes(validated_data, period, percentage, ma_type)
         return self.format_multiple_outputs(results, input_type, index)

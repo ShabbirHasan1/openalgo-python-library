@@ -4,6 +4,13 @@ This is a comprehensive index of all documentation files for the OpenAlgo Techni
 
 ## Main Documentation Files
 
+### 0. **[TALIB_COMPATIBILITY.md](TALIB_COMPATIBILITY.md)** - TA-Lib comparison
+**Purpose**: How OpenAlgo values compare to TA-Lib (matches vs intentional TradingView
+conventions), the OBV flat-close fix, the new TA-Lib-compatible indicators, and the
+coverage gap (candlesticks, Hilbert Transform, etc.).
+
+---
+
 ### 1. **[README.md](README.md)** - Start Here
 **Purpose**: Overview and navigation guide  
 **Contents**:

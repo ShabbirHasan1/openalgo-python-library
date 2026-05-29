@@ -2,11 +2,11 @@
 
 Python client library (`pip install openalgo`) for OpenAlgo's trading platform.
 It wraps the OpenAlgo REST API, the WebSocket market-data feed, and ships a
-NumPy/Numba-accelerated technical-indicator library.
+technical-indicator library powered by a Rust core (`openalgo._oaindicators`).
 
 - Requires Python >= 3.12.
-- Runtime deps: `httpx`, `pandas`, `numpy`, `websocket-client`. Optional extra
-  `openalgo[indicators]` adds `numba`.
+- Runtime deps: `httpx`, `pandas`, `numpy`, `websocket-client`. The indicators are
+  built into the package (Rust/PyO3); there is no optional extra and no numba.
 - The SDK talks to a running OpenAlgo server (default REST `http://127.0.0.1:5000`,
   WebSocket proxy `ws://127.0.0.1:8765`). It is a client only; it does not run a
   server itself.
@@ -33,7 +33,7 @@ top-level exports.
 | `openalgo/utilities.py` | market holidays / timings |
 | `openalgo/strategy.py` | `Strategy`: standalone webhook poster (own pooled client) |
 | `openalgo/feed.py` | `FeedAPI`: WebSocket market-data feed (uses `websocket-client`, not httpx) |
-| `openalgo/indicators/` | `ta` technical indicators (Numba-accelerated) |
+| `openalgo/indicators/` | `ta` technical indicators (Rust core via `_oaindicators`) |
 
 ## HTTP layer (connection pooling)
 

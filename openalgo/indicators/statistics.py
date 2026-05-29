@@ -9,6 +9,7 @@ from openalgo.numba_shim import jit
 from typing import Union, Tuple, Optional
 from .base import BaseIndicator
 from .utils import sma, ema, stdev
+from . import _backend
 
 
 class LINREG(BaseIndicator):
@@ -73,7 +74,7 @@ class LINREG(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_linearreg(validated_data, period)
+        result = _backend.linreg(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -138,7 +139,7 @@ class LRSLOPE(BaseIndicator):
         if interval <= 0:
             raise ValueError(f"Interval must be positive, got {interval}")
         
-        result = _calculate_slope_tv(validated_data, period, interval)
+        result = _backend.lrslope(validated_data, period, interval)
         return self.format_output(result, input_type, index)
 
 
@@ -256,7 +257,7 @@ class CORREL(BaseIndicator):
         data1_validated, data2_validated = self.align_arrays(data1_validated, data2_validated)
         self.validate_period(period, len(data1_validated))
         
-        result = self._calculate_correl(data1_validated, data2_validated, period)
+        result = _backend.correl(data1_validated, data2_validated, period)
         return self.format_output(result, input_type, index)
 
 
@@ -343,7 +344,7 @@ class BETA(BaseIndicator):
         asset_data, market_data = self.align_arrays(asset_data, market_data)
         self.validate_period(period + 1, len(asset_data))  # +1 for diff
         
-        result = self._calculate_beta_optimized(asset_data, market_data, period)
+        result = _backend.beta(asset_data, market_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -476,30 +477,13 @@ class VAR(BaseIndicator):
         if mode not in ["LR", "PR"]:
             raise ValueError("Mode must be 'LR' (Logarithmic Returns) or 'PR' (Price)")
         
-        # Calculate base variance components using optimized O(N) method
-        use_log_returns = (mode == "LR")
-        source, variance, stdev_values = self._calculate_variance_tv_optimized(validated_data, lookback, use_log_returns)
-        
-        # Calculate EMA of variance using optimized utility
-        ema_variance = ema(variance, ema_period)
-        
-        # Calculate z-score components using optimized utilities
-        variance_sma = sma(variance, filter_lookback)
-        variance_stdev = stdev(variance, filter_lookback)
-        
-        # Calculate z-score: (variance - sma(variance)) / stdev(variance) - vectorized
-        zscore = np.where((~np.isnan(variance)) & (~np.isnan(variance_sma)) & 
-                         (~np.isnan(variance_stdev)) & (variance_stdev > 0),
-                         (variance - variance_sma) / variance_stdev, np.nan)
-        
-        # Calculate EMA of z-score using optimized utility
-        ema_zscore = ema(zscore, ema_length)
-        
         if return_components:
-            results = (variance, ema_variance, zscore, ema_zscore, stdev_values)
+            results = _backend.variance(validated_data, lookback, mode, ema_period,
+                                        filter_lookback, ema_length, True)
             return self.format_multiple_outputs(results, input_type, index)
-        else:
-            return self.format_output(variance, input_type, index)
+        result = _backend.variance(validated_data, lookback, mode, ema_period,
+                                   filter_lookback, ema_length, False)
+        return self.format_output(result, input_type, index)
 
 
 class TSF(BaseIndicator):
@@ -559,7 +543,7 @@ class TSF(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_tsf(validated_data, period)
+        result = _backend.tsf(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -625,7 +609,7 @@ class MEDIAN(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_median(validated_data, period)
+        result = _backend.median(validated_data, period)
         return self.format_output(result, input_type, index)
 
 
@@ -783,21 +767,8 @@ class MedianBands(BaseIndicator):
         else:
             source_data, _, _ = self.validate_input(source)
         
-        # Calculate median
-        median = self._calculate_median_percentile(source_data, median_length)
-        
-        # Calculate ATR
-        atr = self._calculate_atr(high_data, low_data, close_data, atr_length)
-        atr_scaled = atr * atr_mult
-        
-        # Calculate bands
-        upper_band = median + atr_scaled
-        lower_band = median - atr_scaled
-        
-        # Calculate EMA of median
-        median_ema = self._calculate_ema(median, median_length)
-        
-        results = (median, upper_band, lower_band, median_ema)
+        results = _backend.median_bands(high_data, low_data, close_data, source_data,
+                                        median_length, atr_length, atr_mult)
         return self.format_multiple_outputs(results, input_type, index)
 
 
@@ -833,7 +804,7 @@ class MODE(BaseIndicator):
         validated_data, input_type, index = self.validate_input(data)
         self.validate_period(period, len(validated_data))
         
-        result = self._calculate_mode_optimized(validated_data, period, bins)
+        result = _backend.mode(validated_data, period, bins)
         return self.format_output(result, input_type, index)
     
     @staticmethod
