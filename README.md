@@ -9,6 +9,26 @@ A Python library for algorithmic trading using OpenAlgo's REST APIs and WebSocke
 - General Documentation: https://docs.openalgo.in
 - Source: https://github.com/marketcalls/openalgo-python-library
 
+## What's New in 2.0.0
+
+Version 2.0.0 replaces the old Numba/JIT indicator engine with a **Rust core** (via PyO3):
+
+- **No optional extra, no Numba.** Indicators are compiled into the wheel. The legacy
+  `pip install openalgo[indicators]` extra and the `numba`/`llvmlite` dependencies are
+  removed; `pip install openalgo` is all you need.
+- **Python 3.12, 3.13 and 3.14** are all supported (abi3 wheels). Numba previously
+  blocked newer Python/NumPy versions.
+- **New TA-Lib-compatible indicators:** `mom`, `rocp`, `rocr`, `rocr100`, `apo`,
+  `midpoint`, `midprice`, `avgprice`, `medprice`, `typprice`, `wclprice`, `plus_dm`,
+  `minus_dm`, `dx`, `adxr`, `stochf`, `linregangle`, `linregintercept`.
+- **Performance:** every indicator is O(n). Benchmarked head-to-head with TA-Lib on
+  924k bars, the regression/statistics family (`linreg`, `tsf`, `stddev`, `cci`,
+  `macd`, ...) runs faster than TA-Lib; the rest are on par. See the
+  [performance comparison](https://github.com/marketcalls/openalgo-python-library/blob/master/benchmark/TALIB_PERF_COMPARE.md)
+  and [TA-Lib compatibility notes](https://github.com/marketcalls/openalgo-python-library/blob/master/docs/TALIB_COMPATIBILITY.md).
+- **Backward compatible:** the `from openalgo import ta` API is unchanged - existing
+  code keeps working without modification.
+
 ## Installation
 
 To install the OpenAlgo Python library, use pip:
@@ -79,6 +99,11 @@ macd_line, signal_line, hist = ta.macd(close, fast=12, slow=26, signal=9)
 atr   = ta.atr(high, low, close, period=14)
 upper, middle, lower = ta.bbands(close, period=20, std=2.0)
 ```
+
+Many indicators are value-compatible with TA-Lib; where OpenAlgo intentionally follows
+TradingView/Pine conventions instead (EMA/ATR/ADX seeding, etc.), the differences are
+documented in the
+[TA-Lib compatibility notes](https://github.com/marketcalls/openalgo-python-library/blob/master/docs/TALIB_COMPATIBILITY.md).
 
 Full indicator catalog and parameter reference: https://docs.openalgo.in/trading-platform/python/indicators
 
