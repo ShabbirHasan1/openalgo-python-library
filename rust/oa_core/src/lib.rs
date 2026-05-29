@@ -1800,6 +1800,118 @@ pub fn mode(data: &[f64], period: usize, bins: usize) -> Vec<f64> {
     out
 }
 
+/// Triangular MA: double per-window SMA. n1=(period+1)/2, n2=period-n1+1; second pass
+/// averages the last n2 valid values of the first SMA. Matches TRIMA._calculate_trima.
+pub fn trima(data: &[f64], period: usize) -> Vec<f64> {
+    let n = data.len();
+    let mut out = nan_vec(n);
+    if period == 0 {
+        return out;
+    }
+    let n1 = (period + 1) / 2;
+    let n2 = period - n1 + 1;
+    let mut first = nan_vec(n);
+    if n >= n1 && n1 > 0 {
+        for i in n1 - 1..n {
+            let mut s = 0.0;
+            for j in 0..n1 {
+                s += data[i - n1 + 1 + j];
+            }
+            first[i] = s / n1 as f64;
+        }
+    }
+    if n1 + n2 < 2 {
+        return out;
+    }
+    let start = n1 + n2 - 2;
+    for i in start..n {
+        if first[i].is_nan() {
+            continue;
+        }
+        let ws = if i + 1 >= n2 { i + 1 - n2 } else { 0 };
+        let mut valid: Vec<f64> = Vec::with_capacity(i + 1 - ws);
+        for k in ws..i + 1 {
+            if !first[k].is_nan() {
+                valid.push(first[k]);
+            }
+        }
+        if valid.len() >= n2 {
+            let mut s = 0.0;
+            for &x in &valid[valid.len() - n2..] {
+                s += x;
+            }
+            out[i] = s / n2 as f64;
+        }
+    }
+    out
+}
+
+/// Stochastic RSI -> (%K, %D). RSI(rsi_period) -> per-window stoch(stoch_period) of RSI
+/// (50 when flat) -> SMA-of-clean(%K, k_period) -> SMA-of-clean(%D, d_period).
+pub fn stochrsi(
+    data: &[f64],
+    rsi_period: usize,
+    stoch_period: usize,
+    k_period: usize,
+    d_period: usize,
+) -> (Vec<f64>, Vec<f64>) {
+    let r = rsi(data, rsi_period);
+    let n = r.len();
+    let mut sr = nan_vec(n);
+    if stoch_period >= 1 {
+        for i in stoch_period - 1..n {
+            let mut hi = f64::NEG_INFINITY;
+            let mut lo = f64::INFINITY;
+            let mut any = false;
+            for k in i + 1 - stoch_period..i + 1 {
+                let v = r[k];
+                if !v.is_nan() {
+                    if v > hi {
+                        hi = v;
+                    }
+                    if v < lo {
+                        lo = v;
+                    }
+                    any = true;
+                }
+            }
+            if any {
+                if hi != lo {
+                    sr[i] = (r[i] - lo) / (hi - lo) * 100.0;
+                } else {
+                    sr[i] = 50.0;
+                }
+            }
+        }
+    }
+    let kk = _smooth_clean(&sr, k_period);
+    let dd = _smooth_clean(&kk, d_period);
+    (kk, dd)
+}
+
+/// Mean of the non-NaN values in each trailing `period` window (NaN if none).
+fn _smooth_clean(src: &[f64], period: usize) -> Vec<f64> {
+    let n = src.len();
+    let mut out = nan_vec(n);
+    if period == 0 {
+        return out;
+    }
+    for i in period - 1..n {
+        let mut s = 0.0;
+        let mut cnt = 0usize;
+        for k in i + 1 - period..i + 1 {
+            if !src[k].is_nan() {
+                s += src[k];
+                cnt += 1;
+            }
+        }
+        if cnt > 0 {
+            out[i] = s / cnt as f64;
+        }
+    }
+    out
+}
+
 /// Rolling median over `period` (odd -> middle, even -> mean of two middle).
 pub fn median(data: &[f64], period: usize) -> Vec<f64> {
     let n = data.len();
@@ -2118,6 +2230,24 @@ mod tests {
         let s = [false, false, true, false];
         assert_eq!(exrem(&p, &s), vec![true, false, false, true]);
         assert_eq!(flip(&p, &s), vec![true, true, false, true]);
+    }
+
+    #[test]
+    fn trima_basic() {
+        let d: Vec<f64> = (1..=10).map(|x| x as f64).collect();
+        let r = trima(&d, 4); // n1=2, n2=3
+        assert!(r[3].is_finite());
+        // smooth of a linear ramp stays increasing
+        assert!(r[9] > r[8]);
+    }
+
+    #[test]
+    fn stochrsi_bounds() {
+        let d: Vec<f64> = (1..=60).map(|x| (x as f64 * 0.2).sin() + 100.0).collect();
+        let (k, dd) = stochrsi(&d, 14, 14, 3, 3);
+        let kv: Vec<f64> = k.iter().cloned().filter(|x| !x.is_nan()).collect();
+        assert!(kv.iter().all(|&x| x >= 0.0 && x <= 100.0));
+        assert_eq!(dd.len(), 60);
     }
 
     #[test]

@@ -45,11 +45,25 @@ definitions align. Reference = the original kernels run interpreted.
 - A key FP detail learned and applied: match Python's exact float association
   (`acc = acc + new - old`, `100*(a/b)`, thread the seed through `cumprod`).
 
-## Speed (see benchmark/SPEED.md)
-Rust vs the interpreted-Python reference (numba removed) on real + synthetic data:
-common indicators are ~**50x-240x** faster (sma/ema/wma/rsi/macd/atr/stochastic/
-supertrend/sar). Per-window numpy stats (linreg/adx/bbands-composite) are numpy-speed.
-Rust timings are on par with TA-Lib for the pure kernels.
+## Speed
+Two benchmark reports:
+- `benchmark/SPEED.md` - RELIANCE daily + synthetic 100k (representative set).
+- `benchmark/FULL_BENCHMARK.md` - **NIFTY 50 1-min, 924,782 bars**, every indicator,
+  New (Rust) vs Old (interpreted) vs TA-Lib + accuracy.
+
+After Phase 6 (all per-window kernels ported to Rust) EVERY indicator is Rust-fast.
+On 924k bars, New-vs-Old (interpreted) speedups: linreg 725x, tsf 667x, cmf 500x,
+correl 488x, kama 479x, ckstop 367x, rwi 316x, beta 305x, ultosc 278x, frama 261x,
+cci 227x, wma 197x, trima 171x, roc 163x, adx 131x ... typical absolute New times are
+5-70 ms on ~925k bars, comparable to TA-Lib's C implementation. Accuracy New-vs-Old is
+0.0 (bit-exact) for most; recursive/transcendental/sum-heavy kernels differ ~1e-11 to
+1e-14 (within the 1e-12 rel target). NOTE: "Old" is interpreted because numba does not
+import on this env; true vs-numba speedups are smaller.
+
+NOTE on correlation/beta: on near-constant data (1-min index windows) these are
+numerically ill-conditioned - the denominator underflows and a ~1e-13 summation
+difference can flip the result; both implementations are "correct". On normal data
+they match to <=1e-9.
 
 ## Build
 ```

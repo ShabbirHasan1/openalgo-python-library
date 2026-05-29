@@ -282,6 +282,8 @@ def trima(data, period):
     """Triangular MA = SMA(SMA(.)) via per-window np.mean (matches reference)."""
     data = _f(data)
     period = int(period)
+    if HAVE_RUST:
+        return _rs.trima(data, period)
     n = data.size
     out = np.full(n, np.nan)
     n1 = (period + 1) // 2
@@ -1148,6 +1150,8 @@ def uo(high, low, close, period1, period2, period3):
 
 def stochrsi(data, rsi_period, stoch_period, k_period, d_period):
     data = _f(data)
+    if HAVE_RUST:
+        return _rs.stochrsi(data, int(rsi_period), int(stoch_period), int(k_period), int(d_period))
     r = rsi(data, int(rsi_period))
     n = r.size
     sr = np.full(n, np.nan)

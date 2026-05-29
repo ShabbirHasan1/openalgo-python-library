@@ -1375,7 +1375,8 @@ class TechnicalAnalysis:
             Array of ROC values as percentages
         """
         data = validate_input(data)
-        return roc(data, length)
+        from . import _backend
+        return _backend.roc(data, length)
     
     def stdev(self, data: Union[np.ndarray, pd.Series, list], period: int) -> np.ndarray:
         """

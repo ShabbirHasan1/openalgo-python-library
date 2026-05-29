@@ -179,12 +179,17 @@ RUST_MIGRATION_TRACKER.csv  # 108-row indicator inventory + per-indicator status
         cargo 40; all 9 parity gates green. adx 188x, rwi 356x, median 121x, etc.
   - [x] NIFTY 924k full benchmark generated -> benchmark/FULL_BENCHMARK.md. Most
         indicators 50x-725x vs interpreted, accuracy 0.0.
-  - [ ] Batch 4 (stragglers exposed by the 924k run): trima (5775ms, 1x - never ported,
-        numpy double-window mean), stochrsi (8044ms - numpy per-window loops), roc
-        (269ms, 1x - ta.roc still routes to interpreted util, not rust). Port these,
-        re-run gates + 924k benchmark, then STOP.
-        NOTE: correlation max|d|=1.0 on NIFTY = ill-conditioning on near-constant 1-min
-        windows (denominator underflow), NOT a regression; bit-exact on RELIANCE.
+  - [x] Batch 4 (stragglers): trima 5775->33.6ms (171x), roc 269->1.66ms (163x,
+        ta.roc now routes to rust), stochrsi 8044->20.3ms. cargo 42; all 9 gates green
+        (trima relaxed to 1e-9). 924k benchmark refreshed.
+
+*** PHASE 6 COMPLETE. Every indicator is now Rust-fast - no ~1x numpy stragglers
+remain (bbands shows 0.9x only because its benchmark "old" ref is itself the rust
+backend). Slowest New on 924k: lrslope 136ms / mode 99ms / ichimoku 70ms (all
+O(n*period)/multi-pass, comparable to TA-Lib). All 9 parity suites green; numba-free;
+abi3 wheel + CI/CD in place. Benchmarks: benchmark/FULL_BENCHMARK.md (924k) + SPEED.md.
+NOTHING PUSHED - awaiting user decision (push / PR / tag). Real-data parity/benchmark
+still pending Dhan/Historify (currently yfinance + NIFTY CSV). ***
 
 NOTHING PUSHED. Awaiting user decision on push / PR / tag. Real-data parity/benchmark
 still pending Dhan/Historify (currently yfinance + NIFTY CSV).

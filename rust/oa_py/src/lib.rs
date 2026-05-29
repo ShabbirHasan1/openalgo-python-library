@@ -42,6 +42,21 @@ wrap_period!(rsi, oa_core::rsi);
 wrap_period!(win_mean, oa_core::win_mean);
 wrap_period!(stoch_single, oa_core::stoch_single);
 wrap_period!(median, oa_core::median);
+wrap_period!(trima, oa_core::trima);
+
+#[pyfunction]
+#[pyo3(signature = (data, rsi_period, stoch_period, k_period, d_period))]
+fn stochrsi<'py>(
+    py: Python<'py>,
+    data: PyReadonlyArray1<'py, f64>,
+    rsi_period: usize,
+    stoch_period: usize,
+    k_period: usize,
+    d_period: usize,
+) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
+    let (k, d) = oa_core::stochrsi(data.as_slice()?, rsi_period, stoch_period, k_period, d_period);
+    Ok((k.into_pyarray_bound(py).unbind(), d.into_pyarray_bound(py).unbind()))
+}
 wrap_period!(wma_nan, oa_core::wma_nan);
 
 #[pyfunction]
@@ -587,6 +602,8 @@ fn _oaindicators(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(win_mean, m)?)?;
     m.add_function(wrap_pyfunction!(stoch_single, m)?)?;
     m.add_function(wrap_pyfunction!(median, m)?)?;
+    m.add_function(wrap_pyfunction!(trima, m)?)?;
+    m.add_function(wrap_pyfunction!(stochrsi, m)?)?;
     m.add_function(wrap_pyfunction!(wma_nan, m)?)?;
     m.add_function(wrap_pyfunction!(variance, m)?)?;
     m.add_function(wrap_pyfunction!(aroon, m)?)?;

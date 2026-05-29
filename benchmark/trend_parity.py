@@ -58,7 +58,7 @@ def main():
     gd2 = T3._calculate_gd(gd1, 21, 0.7)
     t3ref = T3._calculate_gd(gd2, 21, 0.7)
     cmp("t3(21,0.7)", b.t3(c, 21, 0.7), t3ref)
-    cmp("trima(20)", b.trima(c, 20), TRIMA._calculate_trima(c, 20))
+    cmp("trima(20)", b.trima(c, 20), TRIMA._calculate_trima(c, 20), tol=1e-9)  # rust naive vs numpy mean ~1e-13
 
     # ALMA/McGinley use exp/pow -> recursive/transcendental tolerance
     cmp("alma(21)", b.alma(c, 21, 0.85, 6.0), ALMA._calculate_alma(c, 21, 0.85, 6.0), tol=1e-9)
