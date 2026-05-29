@@ -512,7 +512,7 @@ def obv(close, volume):
         return _rs.obv(close, volume)
     n = close.size
     out = np.zeros(n)
-    sign = np.where(close[1:] < close[:-1], -1.0, 1.0)
+    sign = np.where(close[1:] > close[:-1], 1.0, np.where(close[1:] < close[:-1], -1.0, 0.0))
     out[1:] = np.cumsum(sign * volume[1:])
     return out
 

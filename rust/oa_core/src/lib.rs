@@ -1160,12 +1160,19 @@ pub fn sar(high: &[f64], low: &[f64], acceleration: f64, maximum: f64) -> (Vec<f
     (sar, trend)
 }
 
-/// On Balance Volume. obv[0]=0; sign=+1 if close>=prev else -1; cumulative.
+/// On Balance Volume. obv[0]=0; cumulative sign(change)*volume where a flat close
+/// (close==prev) contributes 0 -- matching TradingView ta.obv and TA-Lib OBV.
 pub fn obv(close: &[f64], volume: &[f64]) -> Vec<f64> {
     let n = close.len();
     let mut r = vec![0.0f64; n];
     for i in 1..n {
-        let sign = if close[i] < close[i - 1] { -1.0 } else { 1.0 };
+        let sign = if close[i] > close[i - 1] {
+            1.0
+        } else if close[i] < close[i - 1] {
+            -1.0
+        } else {
+            0.0
+        };
         r[i] = r[i - 1] + sign * volume[i];
     }
     r
@@ -2331,7 +2338,7 @@ mod tests {
         approx(r[0], 0.0);
         approx(r[1], 200.0); // up
         approx(r[2], 150.0); // down -50
-        approx(r[3], 180.0); // equal -> +1
+        approx(r[3], 150.0); // equal -> 0 (matches TA-Lib / TradingView)
     }
 
     #[test]

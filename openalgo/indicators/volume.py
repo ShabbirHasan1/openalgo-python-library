@@ -38,10 +38,12 @@ class OBV(BaseIndicator):
         obv[0] = 0.0
         
         for i in range(1, n):
-            if close[i] < close[i-1]:
+            if close[i] > close[i-1]:
+                sign = 1.0
+            elif close[i] < close[i-1]:
                 sign = -1.0
             else:
-                sign = 1.0
+                sign = 0.0  # flat close contributes 0 (matches TA-Lib / TradingView)
 
             obv[i] = obv[i-1] + (sign * float(volume[i]))
         
