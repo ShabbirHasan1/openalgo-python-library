@@ -193,10 +193,25 @@ def cci(high, low, close, period):
     if period <= 0 or n < period:
         return out
     tp = (high + low + close) / 3.0
-    sma_tp = sma(tp, period)
+    p = float(period)
+    # Replicate the Rust kernel's exact float operation order: an incremental
+    # running-sum SMA (not np.cumsum) and a sequential mean-absolute-deviation
+    # (not np.mean). np.cumsum/np.mean round differently, which in exactly-flat
+    # windows flips the residual sign and yields +-66.67 instead of matching Rust
+    # (a fallback-vs-Rust divergence of up to +-133). This keeps the fallback
+    # bit-identical to Rust. Shipped (Rust) output is unchanged.
+    rsum = 0.0
+    for k in range(period):
+        rsum += tp[k]
     for i in range(period - 1, n):
-        md = np.abs(tp[i - period + 1:i + 1] - sma_tp[i]).mean()
-        out[i] = (tp[i] - sma_tp[i]) / (0.015 * md) if md != 0 else 0.0
+        if i > period - 1:
+            rsum = rsum + tp[i] - tp[i - period]
+        sma_tp = rsum / p
+        md = 0.0
+        for j in range(period):
+            md += abs(tp[i + 1 - period + j] - sma_tp)
+        md /= p
+        out[i] = (tp[i] - sma_tp) / (0.015 * md) if md != 0.0 else 0.0
     return out
 
 
@@ -309,10 +324,22 @@ def ema_wilder(data, period):
         return _rs.ema_wilder(data, period)
     n = data.size
     out = np.full(n, np.nan)
-    if period <= 0 or n < period:
+    if period <= 0:
         return out
-    out[period - 1] = data[:period].sum() / period
-    for i in range(period, n):
+    # Skip leading NaNs and seed from the first `period` valid values, matching the
+    # Rust kernel (rust/oa_core ema_wilder). Without this, a NaN warm-up prefix
+    # (e.g. the dx series inside adx) poisons the seed and the whole output is NaN.
+    first_valid = 0
+    while first_valid < n and np.isnan(data[first_valid]):
+        first_valid += 1
+    if first_valid + period > n:
+        return out
+    seed = data[first_valid:first_valid + period]
+    if np.isnan(seed).any():
+        return out
+    start = first_valid + period - 1
+    out[start] = seed.sum() / period
+    for i in range(start + 1, n):
         v = data[i]
         out[i] = out[i - 1] if np.isnan(v) else (out[i - 1] * (period - 1) + v) / period
     return out
